@@ -9,6 +9,7 @@
 4. 翻译怎么做（转写不翻译，翻译由模型完成）
 5. 转写稿常见同音错字校正
 6. 性能参考
+7. 批量/并行转写（扩展位：何时做、项目参考在哪）
 
 ## 1. 环境与自举
 - 方案：FunASR 1.4.3 + 模型 `iic/SenseVoiceSmall` + VAD `fsmn-vad`，后端 torch，**本地 CPU 离线、0 成本、数据不出本机**。
@@ -67,3 +68,9 @@ SenseVoice 只把“语音转成对应语言的文字”，**不负责翻译**�
 ## 6. 性能参考（Intel i5-13600KF，纯 CPU）
 - VAD 加速后约 15x 实时：10 分钟音频约 35~40 秒，2.5 小时视频约 10 分钟；模型加载 3~4 秒（章节模式只加载一次）。
 - 长视频转写用后台任务跑并轮询，避免前台超时；并发数按 CPU 核数调整。
+
+## 7. 批量 / 并行转写（扩展位，当前不做通用脚本）
+- **已覆盖的批量**：多链接"下载 → 取字幕/无字幕转写 → 成文"走 `fetch_for_article.py` / `batch_fetch.py`；单条整段或按章节走 `transcribe.py`，都已断点跳过。
+- **当前刻意不做**：与具体项目无关的"给一个本地音频文件夹做批量/并行 ASR"的通用脚本（如 `transcribe_batch.py`）——没有重复出现的真实需求前不预先写，避免僵尸代码。
+- **项目参考实现（高顿课程，强耦合，勿直接拷）**：`~/Doubao/chats/2026-08-26/new-chat/gaodun-course-knowledge-base/` 下 `scripts/transcribe_parallel.sh`、`transcribe_all.sh`、`transcribe_pipeline.py`（按 `GAODUN_COURSE_PROFILE` 转整门课、iTerm 多窗口并行、汇总报告）；方法与性能见该项目 `docs/development/tools/transcription.md`，选型见 `docs/project-management/decisions/ADR-003-音频转写方案.md`。它们绑定课程目录/profile，留项目内，不搬进本技能。
+- **何时提炼、怎么提炼**：当出现"脱离任何项目、对一批本地音视频统一离线转写"的真实需求时，再新增 `scripts/transcribe_batch.py`——复用 `transcribe.py` 的单条能力（不重写模型加载/后处理），只加目录遍历、有限并行（按 CPU 核数）、断点跳过与汇总；启用前先拿 3~5 条小样本实测通过再放量。
