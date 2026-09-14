@@ -514,14 +514,17 @@ def download_video(url, output_dir="downloads", quality="best", proxy=None,
     else:
         browser = _resolve_browser(platform, browser, cookie_file, no_browser_cookies)
         mode = "user" if (browser or cookie_file) else "none"
-    fmt = ("bestvideo*+bestaudio/best" if quality == "best"
-           else f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]/best")
+    # 竖屏视频 height>width（如 720x1280），用 [height<=Q] 会把竖屏 720p 误判超标、错选成 360p。
+    # 改用 format_sort 的 res（=min(宽,高)，较短边）封顶，横/竖屏都正确（2026-09 B站竖屏实测）。
+    fmt = "bestvideo*+bestaudio/best"
     opts = _base_opts(output_dir, platform, proxy=proxy, no_proxy=no_proxy,
                       browser=browser, browser_profile=browser_profile,
                       cookie_file=cookie_file, limit_rate=limit_rate,
                       use_ejs=use_ejs)
     opts.update({"format": fmt, "merge_output_format": "mp4",
                  "noplaylist": not playlist})
+    if quality != "best":
+        opts["format_sort"] = [f"res:{quality}", "codec", "fps", "tbr"]
     return _ydl_run(url, opts, platform, mode, browser_profile)
 
 

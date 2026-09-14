@@ -86,7 +86,7 @@ python3 "$BF" "<url1>" ... --with-audio                          # 无字幕条�
 ## 三平台默认策略（排错先看这里，细节见 references/platform-strategy.md）
 
 - **YouTube**：自动探测代理端口(7890/7897/1087…)（`MEDIA_FETCH_PROXY`/`--proxy` 指定）+ node/deno/bun 跑 JS 挑战 + ejs 远程组件；被 bot 拦/429 加 `--browser chrome`。
-- **B站**：强制直连（走代理会 412），自带 UA/Referer、默认限速 2MiB/s、默认不带 Cookie；撞 412 立即停、冷却，勿反复重试。
+- **B站**：强制直连（走代理会 412），自带 UA/Referer、默认限速 2MiB/s、默认不带 Cookie；撞 412 立即停、冷却，勿反复重试。**要列某 UP 主全部投稿/合集（批量下载某人全部视频）时，先读 `references/bilibili-up-listing.md`**：游客态调列表接口（arc/search、动态流）基本走不通，正解是开独立游客 Chrome 驱动前端自己翻页、读渲染好的 DOM（深页可达、快翻被软限流、每页停 10–18s），不要用 yt-dlp 快速翻空间页、也不要裸调接口硬刚。
 - **抖音**：强制直连，默认用匿名设备票据 ttwid（公开视频免登录、免开 Chrome），匿名被拒（Fresh cookies）才回退复用 Chrome 登录态（加 `--browser chrome`）；无独立音轨时 `--audio` 自动抽 m4a。
 
 ## 硬性约束与交付检查

@@ -38,12 +38,17 @@
 - **转写两条路等价**：喂自动抽出的 m4a，或直接把 mp4 交给 `transcribe.py`（内部 ffmpeg 抽轨）都行；批量转写推荐先 `--audio --smallest` 拿 m4a，省下载流量与时间。
 - **排错（改脚本时注意）**：不要用 `worst` 这类"锁死单项"的选择器再指望 `format_sort` 按体积排序——候选只剩一个时排序无意义（会选到分辨率低但体积更大的水印流）。正确做法是 `worstaudio/[acodec!=none]` 先取出"所有含音频流"候选，再用 `format_sort=+filesize_approx,+filesize,+tbr,+res` 取最小。
 
+### B站：竖屏视频别用 `[height<=720]` 选清晰度（2026-09-11 实测）
+竖屏 720p 的帧尺寸是 **720×1280（高>宽）**。用 `bestvideo[height<=720]` 会因 height=1280 不达标，**错选到 360p（640×360）**，体积只有正确档的 1/3 左右；而 yt-dlp 过滤器不支持字段间比较，写 `[width>=height]` 会直接语法错。
+正解是用 format_sort 的 **`res`（=min(宽,高)，较短边）封顶**：`-f 'bv*+ba/b' -S 'res:720'`——横竖屏都按"较短边=720"选中正确档（实测竖屏选 720×1280、`res:1080` 选 1080×1920）。`media_downloader.py` 的整数 quality 分支已统一改成 `format_sort=[res:Q,...]`，调用方无需手动处理；横屏行为同样正确。
+
 ### B站：HTTP 412 / 429
 临时限流，不是封号。脚本遇到会立即退出（退出码 14）并打印指引：
 - 立刻停止，冷却 10~30 分钟（严重时数小时），期间勿反复重试，否则会从 IP 限流升级为账号风控；
 - 确认代理软件为 `bilibili.com` 配了直连规则（脚本本身已强制直连）；
 - 公开音视频不要加 `--browser`；
 - 可用 `--limit-rate 1024` 进一步降速。
+- **要列某 UP 主"全部投稿/合集"**（不是单条 BV）属于另一类高风控的"列表翻页"接口，完整方法见 [`bilibili-up-listing.md`](bilibili-up-listing.md)：finger/spi 设备指纹、wbi 签名、动态流翻页必备的 `dm_*` 指纹参数、软限流（返回空 items）识别与冷却、断点续拉。
 
 ### YouTube：bot 验证 / Sign in to confirm / 429
 - 确认代理可用（自动探测失败就 `--proxy http://127.0.0.1:7890` 或设 `MEDIA_FETCH_PROXY`）；
