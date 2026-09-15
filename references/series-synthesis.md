@@ -24,7 +24,7 @@
 ## 2. 第一步永远是批量探查总览（先看清结构，再决定取稿）
 
 ```bash
-python3 "<skill>/scripts/batch_fetch.py" "<url1>" "<url2>" ... -o series-fetch
+python3 "$SKILL_DIR/scripts/batch_fetch.py" "<url1>" "<url2>" ... -o series-fetch   # SKILL_DIR 已在 SKILL.md 脚本段定义为本技能根
 ```
 
 脚本对每条只解析、不盲目下媒体，产出 `series-overview.md/.json`：按上传日期排序的表（标题/UP/时长/语言/字幕/章节数/字数）、**同作者检测**、建议阅读顺序；有字幕的直接下字幕并**按视频自带章节切成结构化稿**（`transcripts/<id>.md`），无字幕的标 `needs-fetch_for_article`（加 `--with-audio` 才委托单条流水线下载转写，避免一上来拉一堆大文件）。

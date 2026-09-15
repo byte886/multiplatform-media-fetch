@@ -57,7 +57,7 @@ def run(url, out_dir="downloads", force="auto", ocr_quality=720, netkw=None):
     if not info:
         sys.exit(
             "[决策] 视频信息解析失败（多为风控/cookie/代理问题），未下载任何内容。\n"
-            "  · YouTube：检查代理（Clash 7890），被拦时加 --browser chrome；\n"
+            "  · YouTube：检查代理（脚本默认自动探测端口，或用 --proxy 指定），被拦时加 --browser chrome；\n"
             "  · B站：412 风控，冷却几分钟、勿反复重试；\n"
             "  · 抖音：匿名票据被拒时加 --browser chrome 复用登录态。")
     vid = info.get("id")

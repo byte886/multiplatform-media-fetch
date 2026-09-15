@@ -19,6 +19,8 @@ compatibility: "仅在 macOS(Darwin) 实测可用；Windows/Linux 未适配。�
 
 ## 脚本（任意 python3 调用即可，脚本会自动寻找带 yt-dlp/funasr 的解释器重入自身）
 
+> 下文命令统一先设 `SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"`（双机家目录名 chenwenjie/wenjiechen 不同，一律用 `$HOME` 派生，不写死绝对路径）。
+
 - `scripts/fetch_for_article.py`：**单条出文章默认入口**，自动跑下面的决策链并写 manifest。
 - `scripts/batch_fetch.py`：**多链接/同系列入口**，批量探查总览 + 字幕按章节切稿（无字幕条目委托回单条流水线）。
 - `scripts/media_downloader.py`：下载/列格式/列字幕原语（`--audio --smallest`、`--quality 720`、`--list-subs`、`--subs` 等）。
@@ -31,7 +33,7 @@ compatibility: "仅在 macOS(Darwin) 实测可用；Windows/Linux 未适配。�
 
 一条命令：
 ```bash
-python3 "<skill>/scripts/fetch_for_article.py" "<URL或BV号/抖音ID>" -o downloads
+python3 "$SKILL_DIR/scripts/fetch_for_article.py" "<URL或BV号/抖音ID>" -o downloads
 ```
 
 决策顺序与默认值（**用户没特别说明时严格按此执行，不要一上来就下大视频**）：
@@ -50,7 +52,7 @@ python3 "<skill>/scripts/fetch_for_article.py" "<URL或BV号/抖音ID>" -o downl
 ## B. 纯下载原语（收藏 / 分享 / 指定文件时）
 
 ```bash
-DL="<skill>/scripts/media_downloader.py"
+DL="$SKILL_DIR/scripts/media_downloader.py"
 python3 "$DL" "URL" --audio --smallest            # 只要最小音轨（转写/听声）
 python3 "$DL" "URL" --quality 720                 # 限清晰度下视频（微信分享常用 720p）
 python3 "$DL" "URL" --list-formats                # 先看有哪些清晰度/音轨
@@ -63,7 +65,7 @@ python3 "$DL" 7681310654023716147 --audio --audio-format mp3   # 抖音纯数字
 ## 转写 / 翻译 / 成文（A 路线的后半段）
 
 ```bash
-TR="<skill>/scripts/transcribe.py"
+TR="$SKILL_DIR/scripts/transcribe.py"
 python3 "$TR" "downloads/xxx.m4a" transcripts --lang auto         # 整段；日语显式 --lang ja
 python3 "$TR" "video.mp4" transcripts --chapters chapters.json    # 按章节分段（元素 {"start","end","title"} 秒）
 ```
@@ -74,7 +76,7 @@ python3 "$TR" "video.mp4" transcripts --chapters chapters.json    # 按章节分
 识别信号：一次给 ≥2 个链接且同作者/同系列/强相关，或用户说"整理到一起、一个体系、重新编排、形成知识库/一篇"。这不是 N 个独立任务，先成体系再动笔：
 
 ```bash
-BF="<skill>/scripts/batch_fetch.py"
+BF="$SKILL_DIR/scripts/batch_fetch.py"
 python3 "$BF" "<url1>" "<url2>" "<url3>" -o series-fetch        # 批量探查+字幕按章节切稿+总览
 python3 "$BF" "<url1>" ... --with-audio                          # 无字幕条目也自动委托单条流水线取稿
 ```
