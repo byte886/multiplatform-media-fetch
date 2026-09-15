@@ -1,7 +1,7 @@
 ---
 name: multiplatform-media-fetch
-description: 下载 YouTube / 哔哩哔哩(B站/bilibili，支持裸 BV 号) / 抖音(douyin，支持纯数字视频ID) 音视频，并以“拿到文字、梳理成文章”为默认目标：优先取字幕（多种字幕里中文优先、简中优先于繁中），无字幕且平台允许时优先下最小尺寸音频做本地离线转写（SenseVoice+FunASR，中/英/日/韩/粤），连音轨都没有才下可供 OCR 的视频（默认不自动 OCR）；非中文默认翻译成中文，并按作者角色/身份梳理成文章/博文/逐字稿/分段导览；也支持一次给多个同作者/同系列/强相关链接时的批量探查、按章节取稿与体系化编排（合一篇综述或拆多篇、与已有知识库重新编排）。当用户要“下载/保存/提取某条 YouTube、B站、抖音链接”“只要音频/最小音轨”“把视频转成文字稿/逐字稿/字幕”“无字幕就转写”“转写后翻译成中文”“梳理/总结成文章或博文”“按章节分段转写”时使用。内置三平台防风控（代理分流、JS 挑战、匿名票据/Cookie 复用、限速），脚本自动发现本机已装 yt-dlp / FunASR 的 Python 环境直接运行；不涉及剪映等剪辑。
-compatibility: "仅在 macOS(Darwin) 实测可用；Windows/Linux 未适配。执行前先判平台(uname -s 返回 Darwin)，非 macOS 停止并告知需另行适配、不硬跑；将来补齐 Windows 后仍按平台分流并分别标注验证状态"
+description: 下载 YouTube/B站(裸BV号)/抖音(纯数字ID)音视频，默认"出文字、成文章"：优先取字幕(中文优先)，无字幕才下最小音频离线转写(FunASR)，连音轨都没有才下可OCR视频；非中文默认译中文，按作者角色梳理成文章/逐字稿；多链接同系列时批量探查+按章节取稿+体系化编排。触发：下载/保存 YouTube·B站·抖音链接、只要最小音轨、视频转文字稿/逐字稿/字幕、无字幕就转写、转写后译中文、梳理成文章、按章节分段转写。
+compatibility: "仅 macOS(Darwin) 实测；Windows/Linux 未适配。执行前先 uname -s 判平台，非 Darwin 即停并告知需适配；将来补齐 Windows 后仍按平台分流并分别标注验证状态"
 ---
 
 # 多平台音视频获取：默认为“出文字、成文章”服务
@@ -19,7 +19,7 @@ compatibility: "仅在 macOS(Darwin) 实测可用；Windows/Linux 未适配。�
 
 ## 脚本（任意 python3 调用即可，脚本会自动寻找带 yt-dlp/funasr 的解释器重入自身）
 
-> 下文命令统一先设 `SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"`（双机家目录名 chenwenjie/wenjiechen 不同，一律用 `$HOME` 派生，不写死绝对路径）。
+> 下文命令统一先设 `SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"`（双机家目录名可能不同，一律用 `$HOME` 派生，不写死绝对路径）。
 
 - `scripts/fetch_for_article.py`：**单条出文章默认入口**，自动跑下面的决策链并写 manifest。
 - `scripts/batch_fetch.py`：**多链接/同系列入口**，批量探查总览 + 字幕按章节切稿（无字幕条目委托回单条流水线）。
