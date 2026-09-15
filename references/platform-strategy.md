@@ -26,7 +26,7 @@
 **关键认知**：报错里的 "not necessarily logged in" 说明抖音要的是**新鲜设备票据 ttwid，不是登录态**。2026-09-07 实测：仅一枚匿名 ttwid（不登录、不读 Chrome）即可拉取公开视频全部格式。脚本已内置三级 Cookie 策略，正常无需人工：
 1. **默认＝匿名 ttwid 优先**：首次自动向 `ttwid.bytedance.com/ttwid/union/register/` 匿名注册 ttwid（约一年有效），缓存到系统临时目录 `.mediafetch_douyin_ttwid.txt`（权限 600，仅匿名设备票据、非账号凭据，30 天主动刷新），公开视频直接下载，**不打开/不读取 Chrome**。
 2. **匿名被拒→自动回退 Chrome**：匿名票据被风控或该视频需登录时，自动改用 `cookiesfrombrowser=chrome` 复用登录态重试一次（全程自动，仅这步读 Chrome）。实现注意：`ignoreerrors='only_download'` 会把解析错误转成返回码而不抛异常，匿名首试必须临时设 `ignoreerrors=False` 才能捕获并回退。
-3. **仍失败才人工兜底**（少见）：① 升预发布版 `HTTPS_PROXY=http://127.0.0.1:7890 python3 -m pip install -U --pre yt-dlp -i https://pypi.org/simple`（官方源走代理）；② 在 Chrome 打开该视频页、确认登录并刷新一次再跑；多配置用 `--browser-profile "Profile 1"`，或扩展导出 Netscape `cookies.txt` 后 `--cookies cookies.txt`（最稳）。
+3. **仍失败才人工兜底**（少见）：① 升预发布版 `HTTPS_PROXY=http://127.0.0.1:${PROXY_PORT:-7890} python3 -m pip install -U --pre yt-dlp -i https://pypi.org/simple`（官方源走代理）；② 在 Chrome 打开该视频页、确认登录并刷新一次再跑；多配置用 `--browser-profile "Profile 1"`，或扩展导出 Netscape `cookies.txt` 后 `--cookies cookies.txt`（最稳）。
 
 **手动开关**：`--no-browser-cookies`＝只用匿名 ttwid、绝不读 Chrome（拉不动就报错、不回退）；`--browser chrome`＝强制登录态；`--cookies f`＝用自带文件。
 **消不掉的人工**：私密/关注可见/会员内容、滑块或设备校验属抖音安全机制，匿名票据无法替代，仍需本人登录一次。
@@ -51,7 +51,7 @@
 - **要列某 UP 主"全部投稿/合集"**（不是单条 BV）属于另一类高风控的"列表翻页"接口，完整方法见 [`bilibili-up-listing.md`](bilibili-up-listing.md)：finger/spi 设备指纹、wbi 签名、动态流翻页必备的 `dm_*` 指纹参数、软限流（返回空 items）识别与冷却、断点续拉。
 
 ### YouTube：bot 验证 / Sign in to confirm / 429
-- 确认代理可用（自动探测失败就 `--proxy http://127.0.0.1:7890` 或设 `MEDIA_FETCH_PROXY`）；
+- 确认代理可用（自动探测失败就 `--proxy http://127.0.0.1:${PROXY_PORT:-7890}`（端口以实测为准）或设 `MEDIA_FETCH_PROXY`）；
 - 确认装了 node（`which node`），缺 JS 运行时会被风控；
 - 仍被拦加 `--browser chrome` 复用浏览器登录态；
 - 地区/年龄限制视频同样靠 `--browser chrome`。
