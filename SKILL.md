@@ -1,6 +1,6 @@
 ---
 name: multiplatform-media-fetch
-description: 下载 YouTube/B站(裸BV号)/抖音(纯数字ID)音视频，默认"出文字、成文章"：优先取字幕(中文优先)，无字幕才下最小音频离线转写(FunASR)，连音轨都没有才下可OCR视频；非中文默认译中文，按作者角色梳理成文章/逐字稿；多链接同系列时批量探查+按章节取稿+体系化编排。触发：下载/保存 YouTube·B站·抖音链接、只要最小音轨、视频转文字稿/逐字稿/字幕、无字幕就转写、转写后译中文、梳理成文章、按章节分段转写。
+description: 编号课堂(bianhaoclass.com·study1.bianhaoclass.com·腾讯云VOD SimpleAES加密直播回放)下载——此站不在doubao-video-extract支持列表，URL含bianhaoclass.com时必须用本技能，不要走doubao-video-extract统一入口。同时下载 YouTube/B站(裸BV号)/抖音(纯数字ID)音视频，默认"出文字、成文章"：优先取字幕(中文优先)，无字幕才下最小音频离线转写(FunASR)，连音轨都没有才下可OCR视频；非中文默认译中文，按作者角色梳理成文章/逐字稿；多链接同系列时批量探查+按章节取稿+体系化编排。触发：下载/保存编号课堂·bianhaoclass·study1.bianhaoclass.com·腾讯云VOD加密直播回放·YouTube·B站·抖音链接、只要最小音轨、视频转文字稿/逐字稿/字幕、无字幕就转写、转写后译中文、梳理成文章、按章节分段转写。
 compatibility: "仅 macOS(Darwin) 实测；Windows/Linux 未适配。执行前先 uname -s 判平台，非 Darwin 即停并告知需适配；将来补齐 Windows 后仍按平台分流并分别标注验证状态"
 ---
 
@@ -90,6 +90,13 @@ python3 "$BF" "<url1>" ... --with-audio                          # 无字幕条�
 - **YouTube**：自动探测代理端口(7890/7897/1087…)（`MEDIA_FETCH_PROXY`/`--proxy` 指定）+ node/deno/bun 跑 JS 挑战 + ejs 远程组件；被 bot 拦/429 加 `--browser chrome`。
 - **B站**：强制直连（走代理会 412），自带 UA/Referer、默认限速 2MiB/s、默认不带 Cookie；撞 412 立即停、冷却，勿反复重试。**要列某 UP 主全部投稿/合集（批量下载某人全部视频）时，先读 `references/bilibili-up-listing.md`**：游客态调列表接口（arc/search、动态流）基本走不通，正解是开独立游客 Chrome 驱动前端自己翻页、读渲染好的 DOM（深页可达、快翻被软限流、每页停 10–18s），不要用 yt-dlp 快速翻空间页、也不要裸调接口硬刚。
 - **抖音**：强制直连，默认用匿名设备票据 ttwid（公开视频免登录、免开 Chrome），匿名被拒（Fresh cookies）才回退复用 Chrome 登录态（加 `--browser chrome`）；无独立音轨时 `--audio` 自动抽 m4a。
+- **编号课堂 / 腾讯云 VOD SimpleAES 加密站**：yt-dlp/ffmpeg 直下不通（私有 DRM）。**先读 `references/tencent-vod-simpleaes.md`**。流程：①从 URL 提取 `live/<数字>`；②用 `open -a "Google Chrome" <视频URL>` 在外部 Chrome 打开页面（不要用内置浏览器，不要让用户接管内置浏览器）；③如跳转登录页，提示用户微信扫码登录并点播放；④用户确认后跑一键脚本：
+  ```bash
+  export NODE_PATH="${NODE_PATH:-/tmp/node_modules}"
+  bash scripts/download_bianhao.sh "live/903960" "/output/第一天.mp4"
+  ```
+  CDP 连接、授权弹窗、解密合并全自动。
+- **HLS 直播流录制**：网页直播（blob: URL + MSE，无 sfePlayers、无 DRM 加密）。**先读 `references/live-stream-record.md`**。流程：①Chrome 打开直播页并点播放；②`node scripts/cdp_extract_live_m3u8.js "<url_sub>" --out /tmp/live.json` 从 performance entries 提取 m3u8；③检查 `encrypted` 字段，无加密则 `bash scripts/record_live.sh "<m3u8_url>" output.mp4 /tmp/live.json` 后台录制。
 
 ## 硬性约束与交付检查
 
