@@ -41,7 +41,7 @@ python3 "$SKILL_DIR/scripts/fetch_for_article.py" "<URL或BV号/抖音ID>" -o do
 1. **字幕优先**：先探测手动+自动字幕，多种字幕里**中文优先（简中 zh-Hans > 繁中 zh-Hant > 英文 en > 其他），同语言手动字幕优先于自动字幕**。命中就**只下字幕、转 srt、自动清洗成纯文本，不再下载任何音视频**（最省）。
 2. **无字幕 → 最小音频**：平台有音轨就下**最小尺寸音频**（`worstaudio`，转写够用、最省流量；抖音无独立音轨会自动从合一视频无损抽出 m4a），交给 `transcribe.py` 转写。
 3. **连音轨都没有 → 可 OCR 的视频**：才下视频，取**适中清晰度（默认 ≤720p，保证画面文字可识别，不能取最小糊视频）**。
-4. **下载得到的视频默认不跑 OCR**：OCR 只是兜底文字来源，不自动执行；确需画面文字时再用 OCR/work-doc-extract 技能，且若视频其实有声，优先改回音频路线。
+4. **下载得到的视频默认不跑 OCR**：OCR 只是兜底文字来源，不自动执行；确需画面文字时跑 `scripts/video_ocr_pipeline.py`（详见 `references/video-screen-ocr.md`），且若视频其实有声，优先改回音频路线。
 5. **非中文默认翻译成中文**：字幕语言或转写文本非中文时，默认译为通顺中文（不是硬译，贴合中文同类作者口吻）。
 6. **默认按作者角色成文**：分析内容、判断视频里作者的身份（教学/新闻评论/测评/经验分享/访谈口播/宣传带货…），用匹配的结构梳理成文章。方法与模板见 `references/article-pipeline.md`。
 
@@ -97,6 +97,7 @@ python3 "$BF" "<url1>" ... --with-audio                          # 无字幕条�
   ```
   CDP 连接、授权弹窗、解密合并全自动。
 - **HLS 直播流录制**：网页直播（blob: URL + MSE，无 sfePlayers、无 DRM 加密）。**先读 `references/live-stream-record.md`**。流程：①Chrome 打开直播页并点播放；②`node scripts/cdp_extract_live_m3u8.js "<url_sub>" --out /tmp/live.json` 从 performance entries 提取 m3u8；③检查 `encrypted` 字段，无加密则 `bash scripts/record_live.sh "<m3u8_url>" output.mp4 /tmp/live.json` 后台录制。
+- **视频屏幕文字 OCR（兜底）**：视频里有只在画面上、语音没说的关键信息（ComfyUI/PS 界面参数、模型文件名、PPT 文字、代码）。**先读 `references/video-screen-ocr.md`**。一键：`python3 scripts/video_ocr_pipeline.py video.mp4 -o out_ocr.md`，自动完成 ffmpeg 抽帧（每10s）→ dHash 去重 → macOS Vision OCR → 带时间戳 Markdown。grep 关键词定位后，对识别不清的关键帧直接 `Read` 看图。
 
 ## 硬性约束与交付检查
 
