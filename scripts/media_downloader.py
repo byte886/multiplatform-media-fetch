@@ -29,6 +29,7 @@ CLI 示例：
 """
 import argparse
 import glob
+import json
 import os
 import re
 import shutil
@@ -628,6 +629,9 @@ SUBTITLE_TEXT_EXTS = ("srt", "vtt", "ttml", "json3")
 
 def _lang_rank(lang: str):
     l = (lang or "").lower()
+    # B站 AI 字幕前缀是 ai-（如 ai-zh, ai-en），去掉后再判断
+    if l.startswith("ai-"):
+        l = l[3:]
     if l.startswith("zh"):
         order = {k: i for i, k in enumerate(SUBTITLE_ZH_PREF)}
         return (0, order.get(l, 3))
@@ -635,6 +639,60 @@ def _lang_rank(lang: str):
         if l == x or l.startswith(x + "-"):
             return (1, i)
     return (2, l)
+
+
+def _bilibili_fetch_ai_subtitles(ydl, info):
+    """yt-dlp 的 B站 extractor 不解析 AI 字幕，这里直接调 player/wbi/v2 API 补全。
+    需要登录态 cookie（从 ydl 的 cookiejar 取）。把结果填入 info['automatic_captions']。"""
+    try:
+        bvid = info.get("id") or info.get("display_id")
+        if not bvid:
+            return
+        cid = info.get("cid")
+        if not cid:
+            pages = info.get("pages") or []
+            if pages:
+                cid = pages[0].get("cid")
+        # yt-dlp 不暴露 cid，先调 view API 获取
+        if not cid:
+            view_api = f"https://api.bilibili.com/x/web-interface/view?bvid={bvid}"
+            vreq = urllib.request.Request(view_api, headers={
+                "User-Agent": CHROME_UA, "Referer": "https://www.bilibili.com/"})
+            opener = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(ydl.cookiejar))
+            with opener.open(vreq, timeout=10) as resp:
+                vdata = json.loads(resp.read())
+            cid = (vdata.get("data", {}).get("cid")
+                   or (vdata.get("data", {}).get("pages") or [{}])[0].get("cid"))
+        if not cid:
+            return
+        api = (f"https://api.bilibili.com/x/player/wbi/v2?"
+               f"bvid={bvid}&cid={cid}")
+        req = urllib.request.Request(api, headers={
+            "User-Agent": CHROME_UA,
+            "Referer": "https://www.bilibili.com/",
+        })
+        opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(ydl.cookiejar))
+        with opener.open(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+        subs = (data.get("data", {}).get("subtitle", {}) or {}).get("subtitles") or []
+        if not subs:
+            return
+        auto = info.setdefault("automatic_captions", {})
+        for s in subs:
+            lan = s.get("lan", "")
+            surl = s.get("subtitle_url", "")
+            if surl.startswith("//"):
+                surl = "https:" + surl
+            tracks = auto.setdefault(lan, [])
+            if not any(t.get("url") == surl for t in tracks):
+                tracks.append({"url": surl, "ext": "json3"})
+        print(f"[B站AI字幕] API 获取到 {len(subs)} 条："
+              + ", ".join(s.get("lan_doc") or s.get("lan", "?") for s in subs),
+              flush=True)
+    except Exception as exc:
+        print(f"[B站AI字幕] API 获取失败（不致命）：{exc}", flush=True)
 
 
 def probe_info(url, *, proxy=None, no_proxy=False, browser=None,
@@ -653,7 +711,10 @@ def probe_info(url, *, proxy=None, no_proxy=False, browser=None,
                       cookie_file=cookie_file, gentle=False, use_ejs=use_ejs)
     base.update({"quiet": True, "no_warnings": True, "skip_download": True})
     with yt_dlp.YoutubeDL(base) as ydl:
-        return ydl.extract_info(url, download=False), platform
+        info = ydl.extract_info(url, download=False)
+        if platform == "bilibili":
+            _bilibili_fetch_ai_subtitles(ydl, info)
+    return info, platform
 
 
 def choose_subtitle(info: dict):
@@ -723,6 +784,34 @@ def download_subtitles(url, output_dir="downloads", *, proxy=None, no_proxy=Fals
     if to_srt:
         opts["postprocessors"] = [{
             "key": "FFmpegSubtitlesConvertor", "format": "srt"}]
+    # B站 AI 字幕：URL 是我们手动填入的，yt-dlp 不认，直接 HTTP 下载并转 SRT
+    track_url = None
+    groups = (info.get("automatic_captions") or {}, info.get("subtitles") or {})
+    for grp in groups:
+        for t in (grp.get(pick["lang"]) or []):
+            if t.get("url"):
+                track_url = t["url"]
+                break
+        if track_url:
+            break
+        req = urllib.request.Request(track_url, headers={
+            "User-Agent": CHROME_UA, "Referer": "https://www.bilibili.com/"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            j = json.loads(resp.read())
+        body = j.get("body", [])
+        with open(srt_path, "w", encoding="utf-8") as f:
+            for i, seg in enumerate(body, 1):
+                def _fmt(t):
+                    h = int(t // 3600); m = int((t % 3600) // 60)
+                    s = int(t % 60); ms = int((t % 1) * 1000)
+                    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+                line = f"{i}\n{_fmt(seg['from'])} --> {_fmt(seg['to'])}\n{seg['content']}\n\n"
+                f.write(line)
+        print(f"[字幕] B站 AI 字幕已直接下载：{srt_path}（{len(body)} 条）")
+        return {"pick": pick, "files": [str(srt_path)], "info": {
+            "title": info.get("title"), "id": info.get("id"),
+            "duration": info.get("duration"), "language": info.get("language")}}
+
     print(f"[字幕] 下载 {pick['lang']}（{'手动' if pick['kind']=='manual' else '自动生成'}），不下载音视频")
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([info.get("webpage_url") or url])

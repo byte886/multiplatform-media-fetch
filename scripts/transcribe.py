@@ -52,6 +52,11 @@ def _candidate_funasr_pythons():
     if env:
         cands.append(env)
     home = str(Path.home())
+    # 全局共享 venv（~/.venvs/ 下按名字识别 funasr 环境）
+    for pat in (f"{home}/.venvs/funasr/bin/python",
+                f"{home}/.venvs/*/bin/python",
+                f"{home}/.venv/funasr/bin/python"):
+        cands.extend(sorted(glob.glob(pat)))
     # 只在 Doubao/chats 下按固定深度查找（避免递归遍历整个 home 导致卡死）
     for pat in (f"{home}/Doubao/chats/*/*/transcription/venv/bin/python",
                 f"{home}/Doubao/chats/*/*/*/transcription/venv/bin/python",

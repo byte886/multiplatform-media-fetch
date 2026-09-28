@@ -37,7 +37,10 @@ def _has_audio(info) -> bool:
 
 
 def _is_zh(lang) -> bool:
-    return bool(lang) and str(lang).lower().replace("_", "-").startswith("zh")
+    l = str(lang or "").lower().replace("_", "-")
+    if l.startswith("ai-"):
+        l = l[3:]
+    return l.startswith("zh")
 
 
 def _artifacts(out: Path, vid, exts):
@@ -52,8 +55,21 @@ def run(url, out_dir="downloads", force="auto", ocr_quality=720, netkw=None):
     out = Path(out_dir).expanduser()
     out.mkdir(parents=True, exist_ok=True)
 
+    # B站 AI 字幕（自动字幕）通常需要登录态才能通过 API 拿到。
+    # probe 阶段默认尝试带 Chrome cookie；用户已显式指定 cookie/browser 或
+    # 用 --no-browser-cookies 关闭时尊重用户选择。下载音视频阶段仍走匿名，
+    # 避免不必要的登录态与风控。
+    platform_hint = md.detect_platform(url)
+    probe_netkw = dict(netkw)
+    download_netkw = dict(netkw)
+    if platform_hint == "bilibili" and not probe_netkw.get("browser") \
+            and not probe_netkw.get("cookie_file") \
+            and not probe_netkw.get("no_browser_cookies"):
+        probe_netkw["browser"] = "chrome"
+        print("[字幕策略] B站探测字幕默认带 Chrome 登录态（AI字幕需登录；下载媒体仍走匿名）", flush=True)
+
     print("[1/决策] 解析视频信息（字幕/音轨/语言）...", flush=True)
-    info, platform = md.probe_info(url, **netkw)
+    info, platform = md.probe_info(url, **probe_netkw)
     if not info:
         sys.exit(
             "[决策] 视频信息解析失败（多为风控/cookie/代理问题），未下载任何内容。\n"
@@ -78,7 +94,7 @@ def run(url, out_dir="downloads", force="auto", ocr_quality=720, netkw=None):
     # —— 路线 1：字幕（只下字幕、转 srt、清洗成稿，不下任何音视频）—— #
     if force == "auto" and pick:
         print("[2/决策] 命中字幕 → 只下字幕并清洗，不下载音视频", flush=True)
-        got = md.download_subtitles(url, output_dir=out, **netkw)
+        got = md.download_subtitles(url, output_dir=out, **probe_netkw)
         if got and got["files"]:
             pick = got["pick"]
             manifest["route"] = "subtitle"
