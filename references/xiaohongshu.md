@@ -95,6 +95,17 @@ downloads/
 - **图片直链有时效**：拿到后尽快下载，不要存几小时后再下。
 - **撞 403/406 就停**：不要立刻重试，冷却 10 分钟以上。
 
+## 收藏逐条详情抓取（v6 已验证方案，2026-10-05 实测 11/13 成功）
+
+favorites 列表（28 条）稳定可抓；逐条详情此前被 xsec_token 卡住，2026-10-05 突破：
+
+1. **打开收藏页**（profile?tab=fav&subTab=note），滚动加载直到目标卡片 `section.note-item[data-note-id="..."]` 出现在 DOM（每轮 wheel 2000px + 1.8s，最多 12 轮；目标不出现就换下一轮）
+2. **同一 evaluate 内** `card.scrollIntoView({block:'center'})` + 点击**可见** a（`Array.from(card.querySelectorAll('a')).find(a => a.offsetParent !== null)`）——点击 display:none 的隐藏 a 会触发 sec_ 风控跳 404
+3. 等待 URL 含 `xsec_token` 且含 note_id（最多 12s；新 tab 需 `context.pages[-1]` 切换）
+4. **拿到 token 后直接在当前页内联提取**——标题/正文/作者/点赞/收藏 + `notes_pre_post` 图片 + performance entries 里 `sns-video` 的 mp4 直链 → `download_url` 下载。**不要再 goto 该 token URL 二次访问**（详情会渲染为空，图0视频0）
+
+失败场景备忘：裸 note_id 直开 300031→404（已登录也不行）；收藏页某些条目滚动 22 轮+搜索路线都找不到（疑为收藏 tab 虚拟渲染/子视图差异，遇此类条目可先跳过，用 search 关键词从搜索结果页点击同机制拿 token）。
+
 ## 与其他平台的分工
 
 - YouTube/B站/抖音：继续走 `media_downloader.py`（yt-dlp 路线）。
