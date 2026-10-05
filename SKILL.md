@@ -85,6 +85,11 @@ python3 "$BF" "<url1>" ... --with-audio                          # 无字幕条�
 - 有字幕的条目已在 `series-fetch/transcripts/<id>.md` 按**视频自带章节**切好；无字幕的单跑 A 路线补齐。
 - 取稿之后的"抽主线、合一篇还是拆多篇、横向去重、与已有知识库交叉重排、**落库时的结构治理（建主题簇/导航页、何时该全量重组）**、事实分级"是 AI 的工作，方法与检查清单读 `references/series-synthesis.md`；多链接内容天然成簇，探查阶段就要预判它将来落到知识库哪一层，不要逐集堆摘要、也不要写完才发现无处安放。
 
+## 效果分析（效果呈现类视频，2026-10-05 新增）
+
+价值在"呈现效果/情绪/镜头语言"的视频（活人感教程、胶片旅拍、广告级成片、短剧片段）**只出文字不够**：内容层（字幕/音频/OCR）照旧拿文稿，**画面层**另做效果拆解——叙事结构（HOOK→CTA）+ 情绪弧线 + 镜头语言（景别/运镜/转场/光线/色彩质感）+ 分平台可复用提示词。
+完整流程与输出模板见 [references/video-effect-analysis.md](references/video-effect-analysis.md)；画面获取优先下载抽帧，被拒走浏览器直读截图（[references/douyin-browser-extract.md](references/douyin-browser-extract.md)）。
+
 ## 三平台默认策略（排错先看这里，细节见 references/platform-strategy.md）
 
 - **YouTube**：自动探测代理端口(7890/7897/1087…)（`MEDIA_FETCH_PROXY`/`--proxy` 指定）+ node/deno/bun 跑 JS 挑战 + ejs 远程组件；被 bot 拦/429 加 `--browser chrome`。
