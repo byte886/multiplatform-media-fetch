@@ -18,6 +18,8 @@
 
 ## 脚本位置与用法
 
+> **浏览器原则**：所有小红书操作统一走**外部 Google Chrome**（`channel="chrome"`，即 `/Applications/Google Chrome.app`），不使用 Doubao 内置 bu 浏览器。cookie 持久化在 `~/.cache/multiplatform-media-fetch/xhs_profile/`。
+
 脚本：`scripts/xhs/xhs_downloader.py`
 
 ```bash
