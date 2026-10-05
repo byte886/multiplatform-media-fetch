@@ -19,7 +19,7 @@ compatibility: "仅 macOS(Darwin) 实测；Windows/Linux 未适配。执行前�
 
 ## 脚本（任意 python3 调用即可，脚本会自动寻找带 yt-dlp/funasr 的解释器重入自身）
 
-> 下文命令统一先设 `SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"`（双机家目录名可能不同，一律用 `$HOME` 派生，不写死绝对路径）。
+> 下文命令统一先设 `SKILL_DIR`＝本技能实际安装目录。**不写死单一位置**：同一套技能可能安装在 `~/Doubao/skills`、`~/DoubaoWork/skills` 或其它 clone/软链共享路径，一律以技能加载返回的实际路径为准（本机常见：`~/Doubao/skills/multiplatform-media-fetch`）。
 
 - `scripts/fetch_for_article.py`：**单条出文章默认入口**，自动跑下面的决策链并写 manifest。
 - `scripts/batch_fetch.py`：**多链接/同系列入口**，批量探查总览 + 字幕按章节切稿（无字幕条目委托回单条流水线）。

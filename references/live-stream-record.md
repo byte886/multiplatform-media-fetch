@@ -41,7 +41,7 @@
 
 ```bash
 export NODE_PATH="${NODE_PATH:-/tmp/node_modules}"
-SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"
+SKILL_DIR="<本技能安装目录>"
 
 node "$SKILL_DIR/scripts/cdp_extract_live_m3u8.js" "<url_substring>" --out /tmp/live_params.json
 ```

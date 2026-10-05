@@ -26,7 +26,7 @@
 ## 一键命令
 
 ```bash
-SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"
+SKILL_DIR="<本技能安装目录>"
 python3 "$SKILL_DIR/scripts/video_ocr_pipeline.py" "video.mp4" -o output_ocr.md
 ```
 

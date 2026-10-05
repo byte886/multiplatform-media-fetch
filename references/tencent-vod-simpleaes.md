@@ -34,7 +34,7 @@
 ### Step 1: 先尝试直接提取参数（不要先问用户）
 
 ```bash
-SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"
+SKILL_DIR="<本技能安装目录>"
 export NODE_PATH="${NODE_PATH:-/tmp/node_modules}"
 node "$SKILL_DIR/scripts/cdp_extract_tencent_vod.js" "live/903960" --out /tmp/bianhao_params.json
 ```
@@ -60,7 +60,7 @@ open -a "Google Chrome" "https://study1.bianhaoclass.com/shop/nw71a3d521a00018/l
 ### Step 3: 一键下载
 
 ```bash
-SKILL_DIR="$HOME/Doubao/skills/multiplatform-media-fetch"
+SKILL_DIR="<本技能安装目录>"
 export NODE_PATH="${NODE_PATH:-/tmp/node_modules}"
 bash "$SKILL_DIR/scripts/download_bianhao.sh" "live/912663" "/output/path/视频.mp4"
 ```
