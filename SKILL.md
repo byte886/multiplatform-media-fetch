@@ -94,7 +94,7 @@ python3 "$BF" "<url1>" ... --with-audio                          # 无字幕条�
 
 - **YouTube**：自动探测代理端口(7890/7897/1087…)（`MEDIA_FETCH_PROXY`/`--proxy` 指定）+ node/deno/bun 跑 JS 挑战 + ejs 远程组件；被 bot 拦/429 加 `--browser chrome`。
 - **B站**：强制直连（走代理会 412），自带 UA/Referer、默认限速 2MiB/s、默认不带 Cookie；撞 412 立即停、冷却，勿反复重试。**要列某 UP 主全部投稿/合集（批量下载某人全部视频）时，先读 `references/bilibili-up-listing.md`**：游客态调列表接口（arc/search、动态流）基本走不通，正解是开独立游客 Chrome 驱动前端自己翻页、读渲染好的 DOM（深页可达、快翻被软限流、每页停 10–18s），不要用 yt-dlp 快速翻空间页、也不要裸调接口硬刚。
-- **抖音**：强制直连，默认用匿名设备票据 ttwid（公开视频免登录、免开 Chrome），匿名被拒（Fresh cookies）先回退 `--browser chrome`；**仍被拒（2026-10-05 实测两路均被拒）即转浏览器直读页面提取法**（官方"章节要点"等效字幕 + 关键帧截图 OCR，见 `references/douyin-browser-extract.md`）；无独立音轨时 `--audio` 自动抽 m4a。
+- **抖音**：强制直连，默认用匿名设备票据 ttwid（公开视频免登录、免开 Chrome），匿名被拒（Fresh cookies）先回退 `--browser chrome`；**仍被拒（2026-10-05 实测两路均被拒）即转浏览器直读页面提取法**（官方"章节要点"等效字幕 + 关键帧截图 OCR，见 `references/douyin-browser-extract.md`）；无独立音轨时 `--audio` 自动抽 m4a。**遍历"我的收藏/关注列表"（私有数据需登录态）走 `references/douyin-favorites-extract.md`**：Chrome 登录验证 → 收藏页滚动收集（read_all href 去重）→ 剔除 Baiduspider 干扰 → 逐条效果分析。
 - **编号课堂 / 腾讯云 VOD SimpleAES 加密站**：yt-dlp/ffmpeg 直下不通（私有 DRM）。**先读 `references/tencent-vod-simpleaes.md`**。流程：①从 URL 提取 `live/<数字>`；②用 `open -a "Google Chrome" <视频URL>` 在外部 Chrome 打开页面（不要用内置浏览器，不要让用户接管内置浏览器）；③如跳转登录页，提示用户微信扫码登录并点播放；④用户确认后跑一键脚本：
   ```bash
   export NODE_PATH="${NODE_PATH:-/tmp/node_modules}"
