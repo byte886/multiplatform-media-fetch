@@ -433,6 +433,183 @@ def my_favorites(session: XHSSession, max_n: int = 100, out_dir: Path | None = N
 
 
 # --------------------------------------------------------------------------- #
+# 收藏详情批量抓取（2026-10-05 v6 方案内置：滚动加载→同帧点击→内联提取）
+# --------------------------------------------------------------------------- #
+def collect_favorite_details(session: XHSSession, fav_list: list, out_dir: Path, max_scroll: int = 12) -> list:
+    """对收藏列表逐条抓详情：滚动直到卡片出现→同帧 scrollIntoView+点击可见 a→等 token→当前页内联提取。
+
+    失效笔记识别：点击不到卡片 / 点击后无 token / 详情为空 → 标记 deleted_or_private，
+    这类通常是作者已删除/下架/转私密（收藏页仍显示占位，但原文不可达）。
+    返回带 status 的列表；详情（图/视频/meta）落在 out_dir/<note_id>/。
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    results = []
+    profile_url = None
+
+    def open_fav():
+        nonlocal profile_url
+        if profile_url is None:
+            session.page.goto(XHS_HOME, wait_until="domcontentloaded", timeout=30000)
+            session.page.wait_for_timeout(3500)
+            profile_url = session.page.evaluate(
+                """() => {
+                  const a = document.querySelector('a[href*="/user/profile/"]');
+                  return a ? a.href.split('?')[0] : '';
+                }"""
+            )
+            if not profile_url:
+                raise RuntimeError("未找到当前登录用户主页——请先 login")
+        session.page.goto(profile_url, wait_until="domcontentloaded", timeout=30000)
+        session.page.wait_for_timeout(3500)
+        session.page.evaluate(
+            """() => {
+              const tabs = Array.from(document.querySelectorAll('a, div, span, button'));
+              const fav = tabs.find(el => el.innerText && el.innerText.trim() === '收藏');
+              if (fav) { fav.click(); return true; }
+              return false;
+            }"""
+        )
+        session.page.wait_for_timeout(3000)
+
+    def scroll_until(nid):
+        for _ in range(max_scroll):
+            found = session.page.evaluate(
+                """(nid) => !!document.querySelector(`section.note-item[data-note-id="${nid}"]`)""", nid
+            )
+            if found:
+                return True
+            session.page.mouse.wheel(0, 2000)
+            session.page.wait_for_timeout(1800)
+        return False
+
+    def click_target(nid):
+        return session.page.evaluate(
+            """(nid) => {
+                const card = document.querySelector(`section.note-item[data-note-id="${nid}"]`);
+                if (!card) return 0;
+                card.scrollIntoView({block:'center'});
+                const visA = Array.from(card.querySelectorAll('a')).find(a => a.offsetParent !== null);
+                if (visA) { visA.click(); return 2; }
+                const img = card.querySelector('img');
+                if (img) { img.click(); return 3; }
+                card.click(); return 4;
+            }""",
+            nid,
+        )
+
+    def extract_inline(nid):
+        """当前已打开的详情页内联提取（不 goto 二次访问，token 二次访问会渲染为空）。"""
+        data = session.page.evaluate("""
+        () => {
+            const get = (sel) => document.querySelector(sel)?.innerText?.trim() || '';
+            const imgs = Array.from(document.querySelectorAll('img'))
+                .map(i => i.src).filter(u => u && u.includes('notes_pre_post'));
+            const vids = performance.getEntriesByType('resource')
+                .map(e => e.name).filter(u => u.includes('sns-video') && u.includes('.mp4'));
+            return {
+                title: get('#detail-title') || get('.note-content .title') || document.title,
+                desc: get('#detail-desc') || get('.note-content .desc') || '',
+                author: get('.author-container .username') || get('.username') || '',
+                like: get('.like-wrapper .count') || '',
+                collect: get('.collect-wrapper .count') || '',
+                imgs: Array.from(new Set(imgs)),
+                vids: Array.from(new Set(vids)),
+            };
+        }
+        """)
+        note_dir = out_dir / nid
+        note_dir.mkdir(parents=True, exist_ok=True)
+        saved_imgs, saved_vids = [], []
+        for i, u in enumerate(dict.fromkeys(data["imgs"]), 1):
+            base = u.split("!")[0]
+            for cand in [u, base]:
+                try:
+                    ext = ".webp" if cand.endswith("webp") else ".jpg"
+                    p = note_dir / f"img_{i:02d}{ext}"
+                    download_url(cand, p)
+                    saved_imgs.append(p.name)
+                    break
+                except Exception:
+                    continue
+        for i, u in enumerate(dict.fromkeys(data["vids"]), 1):
+            try:
+                p = note_dir / f"video_{i:02d}.mp4"
+                download_url(u, p)
+                saved_vids.append(p.name)
+            except Exception:
+                continue
+        data["saved_imgs"] = saved_imgs
+        data["saved_vids"] = saved_vids
+        (note_dir / "meta.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        return data
+
+    for i, item in enumerate(fav_list, 1):
+        nid = item["note_id"]
+        label = item.get("title", "")[:30]
+        print(f"[xhs] 收藏详情 [{i}/{len(fav_list)}] {label}", flush=True)
+        open_fav()
+        if not scroll_until(nid):
+            item["status"] = "deleted_or_private"
+            item["detail"] = "收藏页滚动未出现该卡片（原文已删除/下架/私密）"
+            print("      → 失效（卡片不存在）", flush=True)
+            results.append(item)
+            continue
+        r = click_target(nid)
+        if r == 0:
+            item["status"] = "deleted_or_private"
+            item["detail"] = "卡片存在但点击失败（疑似失效占位）"
+            print("      → 点击失败", flush=True)
+            results.append(item)
+            continue
+        cur = session.page.url
+        if len(session.context.pages) > 1:
+            session.page = session.context.pages[-1]
+            cur = session.page.url
+        got_token = False
+        for _ in range(12):
+            if "xsec_token" in cur and nid in cur:
+                got_token = True
+                break
+            session.page.wait_for_timeout(1500)
+            cur = session.page.url
+        if not got_token:
+            item["status"] = "no_token"
+            item["detail"] = cur[:120]
+            print("      → 无 token（已失效或页面异常）", flush=True)
+            results.append(item)
+            try:
+                if len(session.context.pages) > 1:
+                    session.page.close()
+                    session.page = session.context.pages[0]
+            except Exception:
+                pass
+            continue
+        session.page.wait_for_timeout(3500)
+        try:
+            data = extract_inline(nid)
+            item["status"] = "ok"
+            item["title"] = data.get("title", item.get("title", ""))
+            item["author"] = data.get("author", item.get("author", ""))
+            item["imgs"] = len(data.get("saved_imgs", []))
+            item["vids"] = len(data.get("saved_vids", []))
+            item["detail"] = out_dir / nid
+            print(f"      → OK | 图 {item['imgs']} | 视频 {item['vids']}", flush=True)
+        except Exception as e:
+            item["status"] = "extract_err"
+            item["detail"] = str(e)[:120]
+            print(f"      → 提取异常 {str(e)[:80]}", flush=True)
+        try:
+            if len(session.context.pages) > 1:
+                session.page.close()
+                session.page = session.context.pages[0]
+        except Exception:
+            pass
+        results.append(item)
+
+    return results
+
+
+# --------------------------------------------------------------------------- #
 # CLI
 # --------------------------------------------------------------------------- #
 def main():
@@ -457,9 +634,11 @@ def main():
     p_user.add_argument("--max", type=int, default=30)
     p_user.add_argument("-o", "--out", default="./xhs_downloads")
 
-    p_fav = sub.add_parser("favorites", help="抓取当前登录账号的「我的收藏」列表")
+    p_fav = sub.add_parser("favorites", help="抓取当前登录账号的「我的收藏」列表；--with-detail 连详情一起抓")
     p_fav.add_argument("--max", type=int, default=100)
     p_fav.add_argument("-o", "--out", default="./xhs_downloads")
+    p_fav.add_argument("--with-detail", action="store_true",
+                       help="列表抓完后逐条抓详情（滚动加载→点击→内联提取）；失效笔记标记 deleted_or_private")
 
     sub.add_parser("login", help="扫码登录（cookie 自动持久化）")
 
@@ -479,7 +658,15 @@ def main():
         elif args.cmd == "user":
             user_notes(s, args.url, args.max, Path(args.out))
         elif args.cmd == "favorites":
-            my_favorites(s, args.max, Path(args.out))
+            favs = my_favorites(s, args.max, Path(args.out))
+            if getattr(args, "with_detail", False):
+                print("[xhs] 开始逐条抓收藏详情（--with-detail）...")
+                favs = collect_favorite_details(s, favs, Path(args.out))
+                detail_p = Path(args.out) / "favorites_details.json"
+                detail_p.write_text(json.dumps(favs, ensure_ascii=False, indent=2), encoding="utf-8")
+                ok_n = sum(1 for f in favs if f.get("status") == "ok")
+                dead_n = sum(1 for f in favs if f.get("status") == "deleted_or_private")
+                print(f"[xhs] 收藏详情完成：ok {ok_n} | 失效 {dead_n} | 其他 {len(favs)-ok_n-dead_n} -> {detail_p}")
         elif args.cmd == "login":
             print("[xhs] 登录态已就绪")
     finally:

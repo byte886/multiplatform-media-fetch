@@ -43,7 +43,28 @@ $PY scripts/xhs/xhs_downloader.py user "<用户主页 URL>" --max 30 -o ./downlo
 
 # 我的收藏列表（登录态私有数据，自动识别当前账号）
 $PY scripts/xhs/xhs_downloader.py favorites --max 100 -o ./downloads
+
+# 我的收藏 + 逐条详情（推荐！列表→详情闭环，失效笔记自动标记）
+$PY scripts/xhs/xhs_downloader.py favorites --max 100 --with-detail -o ./downloads
 ```
+
+## 收藏→详情 闭环（2026-10-05 实测沉淀，v6 方案内置）
+
+`favorites --with-detail` 一条命令完成「列表 + 每条详情」，详情（图文/视频/meta）落在 `downloads/<note_id>/`，结果清单含 `status` 字段：
+
+| status | 含义 | 处理 |
+|---|---|---|
+| `ok` | 图文/视频/meta 全部抓到 | 正常使用 |
+| `deleted_or_private` | 收藏页卡片点不到/点击无 token/主页搜索均找不到 → **原文已删除、下架或转私密**（收藏页仍显示占位，原文不可达） | 不必再试；列表已留标题/作者可供记录 |
+| `no_token` / `extract_err` | 页面异常/提取失败 | 重跑该条或人工复制带 xsec_token 链接 |
+
+**方法**（已内置，无需手写）：①回到收藏 tab 滚动直到目标 `section.note-item[data-note-id]` 出现（每轮 2000px/1.8s，≤12 轮）→ ②同一帧 `scrollIntoView`+点击**可见** a → ③等 URL 含 `xsec_token`（新 tab 需切换）→ ④**留在当前详情页内联提取**（图片 `notes_pre_post`、视频 `sns-video` mp4），**不要 goto 二次访问 token URL**（会渲染为空）。
+
+**失效兜底＝分享短链解析（2026-10-05 实测，最高优先级）**：收藏页/搜索/作者主页三路全空时，**不要判定"原文已删除"**——先请用户从 App 分享笔记链接（xhslink.cn 短链），然后：
+1. `curl -sL -o /dev/null -w "%{url_effective}" "https://xhslink.cn/o/xxx"` → 重定向到 login?redirectPath=...，**redirectPath 里含完整 `discovery/item/{id}?xsec_token=...` URL**（URL decode 后把 http 换 https）
+2. 直接用 `note "<该完整URL>"` 子命令抓取——分享签发的 token 直接 goto 可读（不适用"token 二次访问渲染为空"的教训，那是收藏页点击场景）
+3. 实测：某 2 条"三路全空"的收藏（AI珠宝设计入门/首饰模特图3步）用此法 **2/2 抓取成功**（9图+2图，正文完整）
+> 结论：`deleted_or_private` 标记只在「三路全空 **且** 用户无法提供可访问分享链接」时使用；能拿到分享链接一律先走短链解析。
 
 ## URL 要求（关键！）
 
@@ -82,6 +103,7 @@ downloads/
 | `search <kw>` | ✅ | 命中 10 条，从 `section.note-item[data-note-id]` 提取 note_id + 标题 + 点赞数 |
 | `user <url>` | ✅ | 作者主页 15 条笔记，标题正确，含之前测试的汉堡笔记交叉验证一致 |
 | `favorites` | ✅ | 自动识别当前登录账号主页 → 切"收藏"tab → 抓到 28 条收藏（note_id + 标题 + 作者） |
+| `favorites --with-detail` | ✅ | 列表→逐条详情闭环；实测 28 条中 26 条 ok（含图文+视频）；2 条三路全空→**用分享短链解析兜底后 2/2 成功**（2026-10-05 实测） |
 
 **注意**：小红书 web 端限制同时在线设备数，bu 浏览器和 playwright 脚本同时登录会互相挤掉（报"电脑设备登录超限"）。实际使用时**只用 playwright 脚本那个独立 profile**，不要同时开多个已登录实例。
 
