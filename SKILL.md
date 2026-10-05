@@ -8,8 +8,9 @@ compatibility: "仅 macOS(Darwin) 实测；Windows/Linux 未适配。执行前�
 
 ## 平台适用（执行前先读）
 - 本技能当前**仅在 macOS（Darwin）实测可用**，命令、路径、代理端口与系统原生能力均按 Mac。
-- 动手前先判平台：`uname -s` 返回 `Darwin` 才走本技能流程；**Windows/Linux 未适配，遇到就停下告知用户“需先做该平台适配”，不要用想当然的等价命令硬跑**。
-- 以后补齐 Windows 后也必须保留“先判平台 → 按平台分流”的结构：mac/Windows 的命令与路径分开写、各自标注是否已验证。
+- 动手前先判平台：`uname -s` 返回 `Darwin` 才走本技能流程；**Windows/Linux 未适配，遇到就停下告知用户”需先做该平台适配”，不要用想当然的等价命令硬跑**。
+- 以后补齐 Windows 后也必须保留”先判平台 → 按平台分流”的结构：mac/Windows 的命令与路径分开写、各自标注是否已验证。
+- **浏览器原则（通用）**：所有需要开浏览器的采集/调试，统一走**外部 Google Chrome**（`/Applications/Google Chrome.app`，Playwright `channel=”chrome”`），不使用 Doubao 内置 bu 浏览器。原因：内置浏览器与外部 Chrome 登录态不共享，同时登录会互相挤掉（小红书等平台报”电脑设备登录超限”）。cookie 持久化在 `~/.cache/multiplatform-media-fetch/` 下各平台独立 profile。
 
 三种用法，**单条默认走第一条（出文章流水线）**；一次给多个相关链接走第三条；只做收藏/分享、明确要某个文件时才用第二条原语。
 
