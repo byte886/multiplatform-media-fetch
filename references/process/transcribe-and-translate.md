@@ -70,7 +70,7 @@ SenseVoice 只把“语音转成对应语言的文字”，**不负责翻译**�
 - 长视频转写用后台任务跑并轮询，避免前台超时；并发数按 CPU 核数调整。
 
 ## 7. 批量 / 并行转写（扩展位，当前不做通用脚本）
-- **已覆盖的批量**：多链接"下载 → 取字幕/无字幕转写 → 成文"走 `fetch_for_article.py` / `batch_fetch.py`；单条整段或按章节走 `transcribe.py`，都已断点跳过。
+- **已覆盖的批量**：多链接"下载 → 取字幕/无字幕转写 → 成文"走 `fetch_for_article.py` / `batch_series_fetch.py`；单条整段或按章节走 `transcribe.py`，都已断点跳过。
 - **当前刻意不做**：与具体项目无关的"给一个本地音频文件夹做批量/并行 ASR"的通用脚本（如 `transcribe_batch.py`）——没有重复出现的真实需求前不预先写，避免僵尸代码。
 - **项目参考实现（高顿课程，强耦合，勿直接拷）**：`~/Doubao/chats/2026-08-26/new-chat/gaodun-course-knowledge-base/` 下 `scripts/transcribe_parallel.sh`、`transcribe_all.sh`、`transcribe_pipeline.py`（按 `GAODUN_COURSE_PROFILE` 转整门课、iTerm 多窗口并行、汇总报告）；方法与性能见该项目 `docs/development/tools/transcription.md`，选型见 `docs/project-management/decisions/ADR-003-音频转写方案.md`。它们绑定课程目录/profile，留项目内，不搬进本技能。
 - **何时提炼、怎么提炼**：当出现"脱离任何项目、对一批本地音视频统一离线转写"的真实需求时，再新增 `scripts/transcribe_batch.py`——复用 `transcribe.py` 的单条能力（不重写模型加载/后处理），只加目录遍历、有限并行（按 CPU 核数）、断点跳过与汇总；启用前先拿 3~5 条小样本实测通过再放量。

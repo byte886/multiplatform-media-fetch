@@ -20,32 +20,32 @@
 
 > **浏览器原则**：所有小红书操作统一走**外部 Google Chrome**（`channel="chrome"`，即 `/Applications/Google Chrome.app`），不使用 Doubao 内置 bu 浏览器。cookie 持久化在 `~/.cache/multiplatform-media-fetch/xhs_profile/`。
 
-脚本：`scripts/xhs/xhs_downloader.py`
+脚本：`scripts/download/xiaohongshu/xiaohongshu_downloader.py`
 
 ```bash
 PY="/Users/wenjiechen/Library/Application Support/Doubao/sandbox_runtime/bases/e74152cd379ba45d7ca7f16dfa51b727/bin/python3"
 # 或任意装了 playwright 的 python3
 
 # 首次：扫码登录（cookie 自动持久化，以后免登）
-$PY scripts/xhs/xhs_downloader.py login
+$PY scripts/download/xiaohongshu/xiaohongshu_downloader.py login
 
 # 单条笔记（图文+视频+元数据）
-$PY scripts/xhs/xhs_downloader.py note "<带 xsec_token 的笔记 URL>" -o ./downloads
+$PY scripts/download/xiaohongshu/xiaohongshu_downloader.py note "<带 xsec_token 的笔记 URL>" -o ./downloads
 
 # 评论
-$PY scripts/xhs/xhs_downloader.py comments "<笔记 URL>" -o ./downloads
+$PY scripts/download/xiaohongshu/xiaohongshu_downloader.py comments "<笔记 URL>" -o ./downloads
 
 # 搜索关键词（列出笔记列表，不下载详情）
-$PY scripts/xhs/xhs_downloader.py search "<关键词>" --max 20 -o ./downloads
+$PY scripts/download/xiaohongshu/xiaohongshu_downloader.py search "<关键词>" --max 20 -o ./downloads
 
 # 用户主页全部笔记列表
-$PY scripts/xhs/xhs_downloader.py user "<用户主页 URL>" --max 30 -o ./downloads
+$PY scripts/download/xiaohongshu/xiaohongshu_downloader.py user "<用户主页 URL>" --max 30 -o ./downloads
 
 # 我的收藏列表（登录态私有数据，自动识别当前账号）
-$PY scripts/xhs/xhs_downloader.py favorites --max 100 -o ./downloads
+$PY scripts/download/xiaohongshu/xiaohongshu_downloader.py favorites --max 100 -o ./downloads
 
 # 我的收藏 + 逐条详情（推荐！列表→详情闭环，失效笔记自动标记）
-$PY scripts/xhs/xhs_downloader.py favorites --max 100 --with-detail -o ./downloads
+$PY scripts/download/xiaohongshu/xiaohongshu_downloader.py favorites --max 100 --with-detail -o ./downloads
 ```
 
 ## 收藏→详情 闭环（2026-10-05 实测沉淀，v6 方案内置）
@@ -189,5 +189,5 @@ favorites 列表（28 条）稳定可抓；逐条详情此前被 xsec_token 卡�
 ## 与其他平台的分工
 
 - YouTube/B站/抖音：继续走 `media_downloader.py`（yt-dlp 路线）。
-- 小红书：yt-dlp extractor 当前坏的，且反爬重，走 `scripts/xhs/xhs_downloader.py`（浏览器直读路线）。
+- 小红书：yt-dlp extractor 当前坏的，且反爬重，走 `scripts/download/xiaohongshu/xiaohongshu_downloader.py`（浏览器直读路线）。
 - 后续如果 yt-dlp 修复了 XiaoHongShu extractor，可在 `media_downloader.py` 里加一个分发，但当前优先保证本脚本能跑。

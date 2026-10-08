@@ -24,7 +24,7 @@
 ## 2. 第一步永远是批量探查总览（先看清结构，再决定取稿）
 
 ```bash
-python3 "$SKILL_DIR/scripts/batch_fetch.py" "<url1>" "<url2>" ... -o series-fetch   # SKILL_DIR 已在 SKILL.md 脚本段定义为本技能根
+python3 "$SKILL_DIR/scripts/batch_series_fetch.py" "<url1>" "<url2>" ... -o series-fetch   # SKILL_DIR 已在 SKILL.md 脚本段定义为本技能根
 ```
 
 脚本对每条只解析、不盲目下媒体，产出 `series-overview.md/.json`：按上传日期排序的表（标题/UP/时长/语言/字幕/章节数/字数）、**同作者检测**、建议阅读顺序；有字幕的直接下字幕并**按视频自带章节切成结构化稿**（`transcripts/<id>.md`），无字幕的标 `needs-fetch_for_article`（加 `--with-audio` 才委托单条流水线下载转写，避免一上来拉一堆大文件）。
@@ -40,7 +40,7 @@ python3 "$SKILL_DIR/scripts/batch_fetch.py" "<url1>" "<url2>" ... -o series-fetc
 
 ## 3. 取稿：字幕优先、按章节，缺口走单条流水线
 
-- 系列讲解类视频作者大多自带 chapters，**按章节切的稿比按字数切段更利于体系化**（章节=作者亲自划的知识边界），`batch_fetch.py` 已默认这么做。
+- 系列讲解类视频作者大多自带 chapters，**按章节切的稿比按字数切段更利于体系化**（章节=作者亲自划的知识边界），`batch_series_fetch.py` 已默认这么做。
 - 手动字幕最可靠；自动字幕经去滚动重复后仍要通读校专有名词/同音字（错字表见 `transcribe-and-translate.md`）。
 - 无字幕的个别条目：对它单跑 `fetch_for_article.py`（字幕>最小音频>可 OCR 视频），补齐后再一起分析，不要让一条缺口拖住整批。
 
@@ -88,4 +88,4 @@ python3 "$SKILL_DIR/scripts/batch_fetch.py" "<url1>" "<url2>" ... -o series-fetc
 ## 7. 与单视频流水线的分工
 
 - 单条视频 → `fetch_for_article.py` 取稿 + `article-pipeline.md` 按作者角色成文；
-- 多条相关视频 → 本文件：`batch_fetch.py` 批量取稿/按章节 + 本文件做体系化编排与第 5 节落库结构治理；二者的清洗、翻译、转写规范共用，不重复维护。
+- 多条相关视频 → 本文件：`batch_series_fetch.py` 批量取稿/按章节 + 本文件做体系化编排与第 5 节落库结构治理；二者的清洗、翻译、转写规范共用，不重复维护。

@@ -1,118 +1,163 @@
 ---
 name: multiplatform-media-fetch
-description: 编号课堂(bianhaoclass.com·study1.bianhaoclass.com·腾讯云VOD SimpleAES加密直播回放)下载——此站不在doubao-video-extract支持列表，URL含bianhaoclass.com时必须用本技能，不要走doubao-video-extract统一入口。同时下载 YouTube/B站(裸BV号)/抖音(纯数字ID)音视频，默认"出文字、成文章"：优先取字幕(中文优先)，无字幕才下最小音频离线转写(FunASR)，连音轨都没有才下可OCR视频；非中文默认译中文，按作者角色梳理成文章/逐字稿；多链接同系列时批量探查+按章节取稿+体系化编排。触发：下载/保存编号课堂·bianhaoclass·study1.bianhaoclass.com·腾讯云VOD加密直播回放·YouTube·B站·抖音链接、只要最小音轨、视频转文字稿/逐字稿/字幕、无字幕就转写、转写后译中文、梳理成文章、按章节分段转写。
-compatibility: "仅 macOS(Darwin) 实测；Windows/Linux 未适配。执行前先 uname -s 判平台，非 Darwin 即停并告知需适配；将来补齐 Windows 后仍按平台分流并分别标注验证状态"
+description: 多平台音视频采集与文字化处理。支持YouTube/B站/抖音/小红书/腾讯VOD加密站，核心能力：单条视频下载与文字提取（字幕/转写/OCR/翻译/成文）、多链接批量取稿与体系化编排、编号课堂等加密站专用下载。
+compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 ---
 
-# 多平台音视频获取：默认为“出文字、成文章”服务
+# 多平台音视频采集与文字化处理
 
-## 平台适用（执行前先读）
-- 本技能当前**仅在 macOS（Darwin）实测可用**，命令、路径、代理端口与系统原生能力均按 Mac。
-- 动手前先判平台：`uname -s` 返回 `Darwin` 才走本技能流程；**Windows/Linux 未适配，遇到就停下告知用户”需先做该平台适配”，不要用想当然的等价命令硬跑**。
-- 以后补齐 Windows 后也必须保留”先判平台 → 按平台分流”的结构：mac/Windows 的命令与路径分开写、各自标注是否已验证。
-- **浏览器原则（通用）**：所有需要开浏览器的采集/调试，统一走**外部 Google Chrome**（`/Applications/Google Chrome.app`，Playwright `channel=”chrome”`），不使用 Doubao 内置 bu 浏览器。原因：内置浏览器与外部 Chrome 登录态不共享，同时登录会互相挤掉（小红书等平台报”电脑设备登录超限”）。cookie 持久化在 `~/.cache/multiplatform-media-fetch/` 下各平台独立 profile。
+> 支持YouTube/B站/抖音/小红书/腾讯VOD加密站等平台，覆盖下载、转写、OCR、批量取稿、建知识库等场景。**详细场景→服务映射见下文表格。**
 
-三种用法，**单条默认走第一条（出文章流水线）**；一次给多个相关链接走第三条；只做收藏/分享、明确要某个文件时才用第二条原语。
+---
 
-- **A. 出文章（单条，默认）**：`fetch_for_article.py` 一条命令自动决定下什么，再转写/翻译/成文。
-- **B. 纯下载原语**：`media_downloader.py` 手动下音频或视频（收藏、微信分享、剪辑素材等）。
-- **C. 多链接/同系列**：`batch_fetch.py` 批量探查 + 字幕按章节取稿，再按 `references/series-synthesis.md` 体系化梳理编排。
+## 执行原则（AI执行前必读）
+- **浏览器**：所有需要开浏览器的采集/调试，统一走**外部Google Chrome**，不用Doubao内置浏览器（登录态不共享，会互相挤掉）
 
-## 脚本（任意 python3 调用即可，脚本会自动寻找带 yt-dlp/funasr 的解释器重入自身）
+---
 
-> 下文命令统一先设 `SKILL_DIR`＝本技能实际安装目录。**不写死单一位置**：同一套技能可能安装在 `~/Doubao/skills`、`~/DoubaoWork/skills` 或其它 clone/软链共享路径，一律以技能加载返回的实际路径为准（本机常见：`~/Doubao/skills/multiplatform-media-fetch`）。
+## 三种用法（按场景选）
+| 场景 | 用法 | 入口脚本 |
+|---|---|---|
+| 单条视频，要文字/文章 | A. 出文章（默认） | `fetch_for_article.py` |
+| 只要视频/音频文件（收藏/分享） | B. 纯下载原语 | `media_downloader.py` |
+| 多链接同作者/同系列 | C. 批量取稿+体系化编排 | `batch_series_fetch.py` |
 
-- `scripts/fetch_for_article.py`：**单条出文章默认入口**，自动跑下面的决策链并写 manifest。
-- `scripts/batch_fetch.py`：**多链接/同系列入口**，批量探查总览 + 字幕按章节切稿（无字幕条目委托回单条流水线）。
-- `scripts/media_downloader.py`：下载/列格式/列字幕原语（`--audio --smallest`、`--quality 720`、`--list-subs`、`--subs` 等）。
-- `scripts/clean_subtitle.py`：srt/vtt 字幕清洗成纯文本（去时间轴标签、消自动字幕滚动重复）。
-- `scripts/transcribe.py`：本地 FunASR 离线转写（整段 / 按章节）。
+## 脚本（按功能分组）
+
+> 下文命令统一先设 `SKILL_DIR`＝本技能实际安装目录。**不写死单一位置**：同一套技能可能安装在 `~/Doubao/skills`、`~/DoubaoWork/skills` 或其它 clone/软链共享路径，一律以技能加载返回的实际路径为准。
+
+### 下载类（download/）
+| 脚本 | 用途 |
+|---|---|
+| `scripts/download/fetch_for_article.py` | **单条出文章默认入口**，自动决策下字幕/音频/视频 |
+| `scripts/download/batch_series_fetch.py` | **多链接/同系列入口**，批量探查+按章节切稿 |
+| `scripts/download/media_downloader.py` | 通用下载原语（列格式/列字幕/手动下载） |
+
+### 内容处理类（process/）
+| 脚本 | 用途 |
+|---|---|
+| `scripts/process/funasr_transcribe.py` | FunASR离线语音转文字 |
+| `scripts/process/macos_vision_ocr_pipeline.py` | 视频画面OCR |
+| `scripts/process/opencv_keyframe_extractor.py` | 智能关键帧抽取 |
+| `scripts/process/clean_subtitle.py` | srt/vtt字幕清洗 |
 
 > 当前 python3 没装 yt-dlp/funasr 也能跑：脚本按 环境变量 → 全局命令 → `~/Doubao/chats` 下各 venv 自动找可用解释器并重入。手动指定用 `YTDLP_PYTHON` / `FUNASR_PYTHON`。
+
+---
+
+## 场景→服务映射（按用户需求选对应功能）
+
+### 一、下载类
+| 用户需求 | 对应服务 | 入口 |
+|---|---|---|
+| 只要视频/音频文件（收藏/分享/剪辑素材） | 通用下载（YouTube/B站/抖音等） | `media_downloader.py` |
+| 小红书笔记/视频下载 | 小红书专用（yt-dlp内置提取器坏了） | 读 `references/platforms/xiaohongshu.md` |
+| 编号课堂/腾讯VOD加密站下载 | 加密站专用（直下不通） | 读 `references/platforms/tencent-vod-simpleaes.md` |
+| HLS直播录制 | 直播流录制 | 读 `references/platforms/live-stream-record.md` |
+
+### 二、文字提取类
+| 用户需求 | 对应服务 | 入口 |
+|---|---|---|
+| 单条视频，要文字/文章/笔记 | 出文章流水线（自动决策字幕/音频/视频） | `fetch_for_article.py` |
+| 已有音频/视频，直接转写成文字 | 语音转写（FunASR） | `funasr_transcribe.py` |
+| 已有视频，要提取画面里的文字（界面/PPT/代码） | 视频画面OCR | `macos_vision_ocr_pipeline.py` |
+| 已有srt/vtt字幕文件，清洗成纯文本 | 字幕清洗 | `clean_subtitle.py` |
+
+### 三、分析类
+| 用户需求 | 对应服务 | 入口 |
+|---|---|---|
+| 视频要分析运镜/情绪/镜头语言（生成视频参考） | 视频效果分析 | 读 `references/process/video-effect-analysis.md` |
+| 已有视频，要抽关键帧（做素材/截图） | 智能关键帧抽取 | `opencv_keyframe_extractor.py` |
+
+### 四、批量/知识库类
+| 用户需求 | 对应服务 | 入口 |
+|---|---|---|
+| 多链接同作者/同系列，要整理成体系/知识库 | 批量取稿+体系化编排 | `batch_series_fetch.py` |
+| 下载某个UP主全部视频，筛选有价值的建知识库 | 作者全量知识库（6步流水线） | 读 `references/pipeline/author-video-knowledge-base.md` |
+| B站UP主全部投稿采集 | B站专用（游客Chrome翻页） | 读 `references/platforms/bilibili-up-listing.md` |
+| 抖音收藏/关注列表采集 | 抖音专用（登录态，低频防风控） | 读 `references/platforms/douyin-favorites-extract.md` |
+
+---
 
 ## A. 出文章默认流水线（六条默认行为，按顺序决策）
 
 一条命令：
 ```bash
-python3 "$SKILL_DIR/scripts/fetch_for_article.py" "<URL或BV号/抖音ID>" -o downloads
+python3 "$SKILL_DIR/scripts/download/fetch_for_article.py" "<URL或BV号/抖音ID>" -o downloads
 ```
 
 决策顺序与默认值（**用户没特别说明时严格按此执行，不要一上来就下大视频**）：
 
 1. **字幕优先**：先探测手动+自动字幕，多种字幕里**中文优先（简中 zh-Hans > 繁中 zh-Hant > 英文 en > 其他），同语言手动字幕优先于自动字幕**。命中就**只下字幕、转 srt、自动清洗成纯文本，不再下载任何音视频**（最省）。
-2. **无字幕 → 最小音频**：平台有音轨就下**最小尺寸音频**（`worstaudio`，转写够用、最省流量；抖音无独立音轨会自动从合一视频无损抽出 m4a），交给 `transcribe.py` 转写。
+2. **无字幕 → 最小音频**：平台有音轨就下**最小尺寸音频**（`worstaudio`，转写够用、最省流量；抖音无独立音轨会自动从合一视频无损抽出 m4a），交给 `scripts/process/funasr_transcribe.py` 转写。
 3. **连音轨都没有 → 可 OCR 的视频**：才下视频，取**适中清晰度（默认 ≤720p，保证画面文字可识别，不能取最小糊视频）**。
-4. **下载得到的视频默认不跑 OCR**：OCR 只是兜底文字来源，不自动执行；确需画面文字时跑 `scripts/video_ocr_pipeline.py`（详见 `references/video-screen-ocr.md`），且若视频其实有声，优先改回音频路线。
+4. **下载得到的视频默认不跑 OCR**：OCR 只是兜底文字来源，不自动执行；确需画面文字时跑 `scripts/process/macos_vision_ocr_pipeline.py`（详见 `references/process/video-screen-ocr.md`），且若视频其实有声，优先改回音频路线。
 5. **非中文默认翻译成中文**：字幕语言或转写文本非中文时，默认译为通顺中文（不是硬译，贴合中文同类作者口吻）。
-6. **默认按作者角色成文**：分析内容、判断视频里作者的身份（教学/新闻评论/测评/经验分享/访谈口播/宣传带货…），用匹配的结构梳理成文章。方法与模板见 `references/article-pipeline.md`。
+6. **默认按作者角色成文**：分析内容、判断视频里作者的身份（教学/新闻评论/测评/经验分享/访谈口播/宣传带货…），用匹配的结构梳理成文章。方法与模板见 `references/pipeline/article-pipeline.md`。
 
 可用 `--force subtitle|audio|video` 强制走某条路线（默认 auto），`--ocr-quality` 调兜底视频清晰度上限。每跑一次产出 `fetch-manifest-<id>.json`，写明 `route`(subtitle/audio/video-for-ocr)、产物路径、`need_transcribe`、`need_translate`、下一步。
 
-先看有哪些字幕：`media_downloader.py "<URL>" --list-subs`；只下字幕：`--subs`。
+先看有哪些字幕：`scripts/download/media_downloader.py "<URL>" --list-subs`；只下字幕：`--subs`。
 
-## B. 纯下载原语（收藏 / 分享 / 指定文件时）
-
+## B. 纯下载原语（收藏/分享/指定文件时）
 ```bash
-DL="$SKILL_DIR/scripts/media_downloader.py"
-python3 "$DL" "URL" --audio --smallest            # 只要最小音轨（转写/听声）
-python3 "$DL" "URL" --quality 720                 # 限清晰度下视频（微信分享常用 720p）
-python3 "$DL" "URL" --list-formats                # 先看有哪些清晰度/音轨
-python3 "$DL" BV1N64xzKEfA --audio --smallest     # B站裸 BV 号
-python3 "$DL" 7681310654023716147 --audio --audio-format mp3   # 抖音纯数字 ID
+python3 "$SKILL_DIR/scripts/download/media_downloader.py" "URL" --audio --smallest
 ```
-- YouTube 多语言音轨默认锁**原声**、避开 AI 自动配音，要其它音轨加 `--audio-lang en`。
-- 下载默认进 `./downloads/`，命名 `标题 [id].扩展名`。
+详细参数（列格式、限清晰度、下字幕等）：`python3 media_downloader.py --help` 或读 `references/platforms/platform-strategy.md`
 
-## 转写 / 翻译 / 成文（A 路线的后半段）
-
+## 转写/翻译/成文（A路线后半段）
 ```bash
-TR="$SKILL_DIR/scripts/transcribe.py"
-python3 "$TR" "downloads/xxx.m4a" transcripts --lang auto         # 整段；日语显式 --lang ja
-python3 "$TR" "video.mp4" transcripts --chapters chapters.json    # 按章节分段（元素 {"start","end","title"} 秒）
+python3 "$SKILL_DIR/scripts/process/funasr_transcribe.py" "audio.m4a" transcripts --lang auto
 ```
-产出 `transcripts/<名>/transcript.md`(可读稿)+`transcript.json`(带时间戳)，章节模式另出 `chapters_raw.md`。语种选择、非中文默认译中文、双语稿、按作者角色成文、FunASR 环境：读 `references/transcribe-and-translate.md` 与 `references/article-pipeline.md`。
+详细参数（按章节分段、双语稿、FunASR环境）：读 `references/process/transcribe-and-translate.md` 与 `references/pipeline/article-pipeline.md`
 
-## C. 多链接 / 同系列：批量取稿 + 体系化梳理
-
-识别信号：一次给 ≥2 个链接且同作者/同系列/强相关，或用户说"整理到一起、一个体系、重新编排、形成知识库/一篇"。这不是 N 个独立任务，先成体系再动笔：
-
+## C. 多链接/同系列（批量取稿+体系化编排）
+识别信号：≥2个链接同作者/同系列，或用户说"整理到一起/形成知识库"
 ```bash
-BF="$SKILL_DIR/scripts/batch_fetch.py"
-python3 "$BF" "<url1>" "<url2>" "<url3>" -o series-fetch        # 批量探查+字幕按章节切稿+总览
-python3 "$BF" "<url1>" ... --with-audio                          # 无字幕条目也自动委托单条流水线取稿
+python3 "$SKILL_DIR/scripts/download/batch_series_fetch.py" "<url1>" "<url2>" -o series-fetch
 ```
-
-- 先看 `series-fetch/series-overview.md`：同作者检测、按上传日期排序的总览、每集语言/字幕/章节/字数，据此判断递进还是并列、有无缺口。
-- 有字幕的条目已在 `series-fetch/transcripts/<id>.md` 按**视频自带章节**切好；无字幕的单跑 A 路线补齐。
-- 取稿之后的"抽主线、合一篇还是拆多篇、横向去重、与已有知识库交叉重排、**落库时的结构治理（建主题簇/导航页、何时该全量重组）**、事实分级"是 AI 的工作，方法与检查清单读 `references/series-synthesis.md`；多链接内容天然成簇，探查阶段就要预判它将来落到知识库哪一层，不要逐集堆摘要、也不要写完才发现无处安放。
+详细流程（系列总览、按章节切稿、体系化编排）：读 `references/pipeline/series-synthesis.md`
 
 ## 效果分析（效果呈现类视频，2026-10-05 新增）
 
 价值在"呈现效果/情绪/镜头语言"的视频（活人感教程、胶片旅拍、广告级成片、短剧片段）**只出文字不够**：内容层（字幕/音频/OCR）照旧拿文稿，**画面层**另做效果拆解——叙事结构（HOOK→CTA）+ 情绪弧线 + 镜头语言（景别/运镜/转场/光线/色彩质感）+ 分平台可复用提示词。
-完整流程与输出模板见 [references/video-effect-analysis.md](references/video-effect-analysis.md)；画面获取优先下载抽帧，被拒走浏览器直读截图（[references/douyin-browser-extract.md](references/douyin-browser-extract.md)）。
+完整流程与输出模板见 [references/process/video-effect-analysis.md](references/process/video-effect-analysis.md)；画面获取优先下载抽帧，被拒走浏览器直读截图（[references/platforms/douyin-browser-extract.md](references/platforms/douyin-browser-extract.md)）。
 
-## 三平台默认策略（排错先看这里，细节见 references/platform-strategy.md）
+## 各平台关键策略（排错先看这里，细节见 references/platforms/platform-strategy.md）
 
-- **YouTube**：自动探测代理端口(7890/7897/1087…)（`MEDIA_FETCH_PROXY`/`--proxy` 指定）+ node/deno/bun 跑 JS 挑战 + ejs 远程组件；被 bot 拦/429 加 `--browser chrome`。
-- **B站**：强制直连（走代理会 412），自带 UA/Referer、默认限速 2MiB/s、默认不带 Cookie；撞 412 立即停、冷却，勿反复重试。**要列某 UP 主全部投稿/合集（批量下载某人全部视频）时，先读 `references/bilibili-up-listing.md`**：游客态调列表接口（arc/search、动态流）基本走不通，正解是开独立游客 Chrome 驱动前端自己翻页、读渲染好的 DOM（深页可达、快翻被软限流、每页停 10–18s），不要用 yt-dlp 快速翻空间页、也不要裸调接口硬刚。
-- **抖音**：强制直连，默认用匿名设备票据 ttwid（公开视频免登录、免开 Chrome），匿名被拒（Fresh cookies）先回退 `--browser chrome`；**仍被拒（2026-10-05 实测两路均被拒）即转浏览器直读页面提取法**（官方"章节要点"等效字幕 + 关键帧截图 OCR，见 `references/douyin-browser-extract.md`）；无独立音轨时 `--audio` 自动抽 m4a。**遍历"我的收藏/关注列表"（私有数据需登录态）走 `references/douyin-favorites-extract.md`**：Chrome 登录验证 → 收藏页滚动收集（read_all href 去重）→ 剔除 Baiduspider 干扰 → 逐条效果分析。
-- ⚠️ **抖音风控为静默处理（2026-10-07 起）**：与小红书不同，抖音被风控时**不会通知用户**，直接限流/拒绝请求/降权（实证：匿名 ttwid 与 `--browser chrome` 均被拒 `Fresh cookies`，即已被标记）。收藏遍历（需登录态）与小红书同性质，同样需降温：避免全量滚动遍历，优先“用户分享单条链接→单条处理”；确需遍历时低频进行（间隔 ≥30s±50% jitter、单会话 ≤15 条、避免连续滚动）。判断抖音是否被限流的信号是**自己视频的播放/流量是否异常**，不是系统消息。
-- **小红书（Xiaohongshu / RedNote）**：yt-dlp 2026.08.19 内置 XiaoHongShu extractor **实测是坏的**（图文/视频均报 No video formats found），且反爬重（xsec_token + 登录门 + CDN 样式签名）。**走 `scripts/xhs/xhs_downloader.py`（Playwright persistent context 浏览器直读路线）**：首次扫码登录后 cookie 持久化在 `~/.cache/multiplatform-media-fetch/xhs_profile/`，之后免登；给带 `xsec_token` 的完整笔记 URL 即可下正文图（webp 直链）+ 视频 mp4（sns-video-v6 直链）+ 元数据。**裸 note_id 不带 xsec_token 会被 300031 拦截**，必须从首页/搜索点进后复制完整 URL。支持 `note` / `comments` / `search` / `user` / `favorites`（我的收藏列表）五个子命令，详见 [references/xiaohongshu.md](references/xiaohongshu.md)。
-- ⚠️ **风控红线（2026-10-07 起）**：小红书对自动化采集风控极严，自动遍历"我的收藏"已实测触发官方两条警告（「账号异常提醒」＋「账号违规预警」）。**默认禁止**批量 favorites 遍历、并发、自动滚动、深爬评论（>3 页）、任何写操作脚本；采集前必须读 `references/xiaohongshu.md` 的「风控红线与安全采集规程」，按安全模式参数执行（详情间隔 ≥20s±50% jitter、单会话 ≤15 条、每日 ≤100 条、熔断即停不重试）。账号处于警告期时应先完成 7–14 天纯人工冷却，再以观察态参数恢复；个人创作者无官方采集 API，收藏无官方批量导出，素材需求优先走人工专辑＋创作者中心月度导出。
-- **编号课堂 / 腾讯云 VOD SimpleAES 加密站**：yt-dlp/ffmpeg 直下不通（私有 DRM）。**先读 `references/tencent-vod-simpleaes.md`**。流程：①从 URL 提取 `live/<数字>`；②用 `open -a "Google Chrome" <视频URL>` 在外部 Chrome 打开页面（不要用内置浏览器，不要让用户接管内置浏览器）；③如跳转登录页，提示用户微信扫码登录并点播放；④用户确认后跑一键脚本：
-  ```bash
-  export NODE_PATH="${NODE_PATH:-/tmp/node_modules}"
-  bash scripts/download_bianhao.sh "live/903960" "/output/第一天.mp4"
-  ```
-  CDP 连接、授权弹窗、解密合并全自动。
-- **HLS 直播流录制**：网页直播（blob: URL + MSE，无 sfePlayers、无 DRM 加密）。**先读 `references/live-stream-record.md`**。流程：①Chrome 打开直播页并点播放；②`node scripts/cdp_extract_live_m3u8.js "<url_sub>" --out /tmp/live.json` 从 performance entries 提取 m3u8；③检查 `encrypted` 字段，无加密则 `bash scripts/record_live.sh "<m3u8_url>" output.mp4 /tmp/live.json` 后台录制。
-- **视频屏幕文字 OCR（兜底）**：视频里有只在画面上、语音没说的关键信息（ComfyUI/PS 界面参数、模型文件名、PPT 文字、代码）。**先读 `references/video-screen-ocr.md`**。一键：`python3 scripts/video_ocr_pipeline.py video.mp4 -o out_ocr.md`，自动完成 ffmpeg 抽帧（每10s）→ dHash 去重 → macOS Vision OCR → 带时间戳 Markdown。grep 关键词定位后，对识别不清的关键帧直接 `Read` 看图。
+| 平台 | 关键决策点 | 详细文档 |
+|---|---|---|
+| YouTube | 自动探测代理端口，被拦加 `--browser chrome` | `platforms/platform-strategy.md` |
+| B站 | **必须直连**（走代理会412），限速2MiB/s | `platforms/platform-strategy.md` |
+| B站UP主全量采集 | 开游客Chrome驱动前端翻页，不要用yt-dlp | `platforms/bilibili-up-listing.md` |
+| 抖音 | 匿名ttwid→被拒回退Chrome→再被拒走浏览器直读 | `platforms/douyin-browser-extract.md` |
+| 抖音收藏/遍历 | 静默风控，低频（≥30s/条），单会话≤15条 | `platforms/douyin-favorites-extract.md` |
+| 小红书 | yt-dlp内置提取器坏了，用专用脚本，严禁批量遍历 | `platforms/xiaohongshu.md` |
+| 腾讯VOD加密 | 直下不通，走一键脚本+CDP解密 | `platforms/tencent-vod-simpleaes.md` |
+| HLS直播录制 | 无加密m3u8直接录，加密走CDP提取 | `platforms/live-stream-record.md` |
+
+## 行业插件（domain-plugins）
+不同行业的知识提取维度不一样，按需读取。
+
+> 详细模板见 [references/domain-plugins/](references/domain-plugins/)
+> 目前支持：珠宝鉴赏类、视频创作/生成类
 
 ## 硬性约束与交付检查
+- **转写参数**：已在脚本内固定，不要改；统一用FunASR，不要用faster-whisper
+- **日语音频**：必须加`--lang ja`
+- **完成核对**：字数与时长相称（中文约250-320字/分钟）、音频可播放、manifest路由与实际产物一致
+- **多链接**：先批量取总览、补齐缺口再动笔，不要逐集堆摘要
 
-- 转写参数（use_itn、VAD 单段≤30s、batch_size_s=60）已在脚本内固定，不要改；**不要装/用 faster-whisper（Intel CPU 过慢，已弃用）**，统一 FunASR SenseVoiceSmall+fsmn-vad。
-- 日语音频必须 `--lang ja`（auto/zh 偶发误判）。
-- 出文章默认顺序不可颠倒：能字幕就不下载媒体，能音频就不下视频，视频默认不 OCR，非中文默认译中文。
-- 完成后核对：字幕清洗稿/转写稿字数与时长相称（中文口播约每分钟 250–320 字）、音频可播放、manifest 的 route 与实际产物一致；再按作者角色成文。
-- 多链接/同系列：先 `batch_fetch.py` 出总览、补齐缺口再动笔，按 `references/series-synthesis.md` 做体系化编排，不逐集堆摘要。
-- 平台风控、多音轨选流、微信封装、yt-dlp 升级等进阶问题读 `references/platform-strategy.md`。
+## 进阶：作者全量视频知识库构建
+
+当用户需要"下载某个博主/UP主的所有视频，筛选有知识价值的，建立结构化知识库"时，**先读 `references/pipeline/author-video-knowledge-base.md`**。
+
+这不是单条下载，而是完整流水线：
+1. 遍历作者主页收集全量视频列表（标题+URL）
+2. 按标题自动分类（品类/价值等级/处理需求预判）
+3. 生成带状态追踪的Excel清单（增量更新基础）
+4. 按人类节奏批量下载防风控
+5. 每个视频自动处理：语音转写 + 智能关键帧抽取 + 画面OCR
+6. 按行业插件生成结构化知识文档（珠宝/视频创作/编程等）
+
+核心脚本：`scripts/process/opencv_keyframe_extractor.py`（智能抽帧，替代固定10秒抽帧）。
