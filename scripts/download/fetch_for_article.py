@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "process"))
 import media_downloader as md  # noqa: E402  (导入即完成 yt-dlp 解释器自举)
 from clean_subtitle import clean as clean_subtitle_raw  # noqa: E402
 

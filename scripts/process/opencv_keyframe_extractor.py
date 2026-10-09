@@ -30,7 +30,13 @@ def get_video_info(video_path):
     result = subprocess.run(cmd, capture_output=True, text=True)
     info = json.loads(result.stdout)
     duration = float(info["format"]["duration"])
-    fps = eval(info["streams"][0].get("r_frame_rate", "25/1"))
+    video_stream = next(
+        (s for s in info.get("streams", []) if s.get("codec_type") == "video"),
+        info["streams"][0],
+    )
+    num, _, den = video_stream.get("r_frame_rate", "25/1").partition("/")
+    den_f = float(den or 1)
+    fps = float(num) / den_f if den_f else 25.0
     return duration, fps
 
 
