@@ -26,11 +26,14 @@
 
 ## 步骤（整段放在同一个浏览器 cell）
 
+> ⚠️ **一条视频一个独立 cell，禁止在一个 cell 里长循环连下多条**（2026-10-11 实测踩坑）：单 cell 有执行时长上限，长循环会超时；更危险的是 SPA 切换视频后画面/缓冲切换慢，若边导航边取 URL 会**串流**——连续两条下成同一个 tos 对象（md5 相同）。下面的稳健版用三道闸防串流：①导航后 `page_info` 校验 URL 含 vid 且标题正确；②记录播放**前**已缓冲的流 path 集合，只取播放**后新增差集**；③URL 一律按 **path（去掉 `?` 签名 query）识别身份**——同一 tos 对象每次重签 query 都不同，用完整 URL 去重会失效。下载后再用 md5 复核（见下节）。
+
 ```python
 import seed_browser_use as bu, json, re, time
 
-vid = "7121280916038618405"          # 替换为目标视频纯数字 ID
-out_name = f"probe_{vid}.mp4"        # 下载文件名（落浏览器下载目录）
+vid = "7121280916038618405"          # 目标视频纯数字 ID
+expect_kw = "能变色的贵重宝石"        # 标题应包含的关键词（确认没串到别的视频）
+out_name = f"{expect_kw}.mp4"        # 建议用简短中文标题命名落盘
 
 def unwrap(x):                        # 兼容 bu.js 返回被 dict 包裹
     if isinstance(x, dict):
@@ -38,40 +41,60 @@ def unwrap(x):                        # 兼容 bu.js 返回被 dict 包裹
             if k in x: return unwrap(x[k])
     return x
 
-# 1) 导航 + 点播放（不播放不会发起媒体流请求）
+def tos_paths():
+    # 返回 {去签名path: (br, 完整url)}；path 才是流的身份，签名 query 每次会变
+    p = unwrap(bu.js("return performance.getEntriesByType('resource').map(e=>e.name)"
+                     ".filter(n=>n.indexOf('/video/tos')>=0||n.indexOf('douyinvod')>=0);")) or []
+    s = json.dumps(bu.network_requests(), ensure_ascii=False, default=str)
+    t = s.replace('\\u002F','/').replace('\\/','/').replace('\\u0026','&').replace('&amp;','&')
+    urls = re.findall(r'https?://[^\s"\\\]\)<>]*?/video/tos[^\s"\\\]\)<>]*', t)
+    out = {}
+    for u in [*p, *urls]:
+        path = u.split('?')[0]
+        m = re.search(r'[?&]br=(\d+)', u); br = int(m.group(1)) if m else 0
+        if path not in out or br > out[path][0]:   # 同 path 保留码率最高者
+            out[path] = (br, u)
+    return out
+
+# 1) 导航，先校验页面确实是目标视频（防串流第一道闸）
 bu.navigate(f"https://www.douyin.com/video/{vid}")
-bu.wait_for_load(timeout=20); time.sleep(4)
-bu.js("var v=document.querySelector('video'); if(v){v.muted=false; v.play().catch(()=>{});}")
-time.sleep(7)
+bu.wait_for_load(timeout=20); time.sleep(3)
+info = bu.page_info()
+assert vid in str(info.get("url", "")), f"页面URL不含目标vid：{info.get('url')}"
+assert expect_kw in str(info.get("title", "")), f"标题不符（疑串流）：{info.get('title')}"
 
-# 2) 双路取流：performance（多数时候为空）+ network_requests（实测有效）
-p = unwrap(bu.js("return performance.getEntriesByType('resource').map(e=>e.name)"
-                 ".filter(n=>n.indexOf('/video/tos')>=0||n.indexOf('/audio/tos')>=0"
-                 "||n.indexOf('douyinvod')>=0);")) or []
-s = json.dumps(bu.network_requests(), ensure_ascii=False, default=str)
-t = s.replace('\\u002F','/').replace('\\/','/').replace('\\u0026','&').replace('&amp;','&')
-n = re.findall(r'https?://[^\s"\\\]\)<>]*?/(?:video|audio)/tos[^\s"\\\]\)<>]*', t)
-urls = sorted(set([*p, *n]))
+# 2) 记录播放前已缓冲的流 path 集合（SPA 可能残留上一条视频的流）
+before = set(tos_paths().keys())
 
-def br(u):
-    m = re.search(r'[?&]br=(\d+)', u); return int(m.group(1)) if m else 0
-vids = sorted([u for u in urls if '/video/tos' in u], key=br, reverse=True)
-assert vids, "未取到 video/tos 直链：可能未播放/被风控/需登录，按登录墙或稍后重试处理"
-url = vids[0]                        # 码率最高 = 最清晰（音视频合一）
+# 3) 点播放并拖动，等新流缓冲（不播放不发起媒体流请求）
+bu.js("var v=document.querySelector('video'); if(v){v.muted=false; v.currentTime=2; v.play().catch(()=>{});}")
+time.sleep(9)
+after = tos_paths()
 
-# 3) 立即下载（浏览器上下文，带会话）
+# 4) 只选“播放后新增”的流，取 br 最高（音视频合一，无需另抓 audio 轨）
+new_paths = set(after) - before
+cand = sorted(new_paths, key=lambda x: after[x][0], reverse=True)
+assert cand, "播放后无新增 video/tos 流：可能未播放/被风控/需登录，按登录墙或稍后重试处理"
+url = after[cand[0]][1]
+
+# 5) 立即下载（签名 URL 时效极短；浏览器上下文带会话）
 rec = bu.download(url, filename=out_name)
-print(rec)                            # 关注 state=completed 与 path、bytes
+print(rec, "\npath=", cand[0], "br=", after[cand[0]][0])
 ```
 
 ## 下载后校验与转写
 
 ```bash
-# 确认含视频流 + 音频流（应看到 h264 与 aac 两条 stream）
-ffprobe -v error -show_entries stream=codec_type,codec_name,width,height \
-        -of default "<下载目录>/probe_<vid>.mp4"
+# 1) 防串流复核（多条连下必做）：算新文件 md5，与本批已下载文件逐一比对
+md5 -q "<下载目录>/<新文件>.mp4"     # macOS；Linux 用 md5sum
+#    出现与任一已下载文件相同的 md5 = 串流（下成了上一条），删除该文件、回到步骤1重下；
+#    ffprobe 的时长也可辅助判别（不同视频时长一般不同）。
 
-# 转写（FunASR，自动发现解释器；模型首次运行自动下载，之后离线）
+# 2) 确认含视频流 + 音频流（应看到 h264 与 aac 两条 stream；web playAddr 音视频合一）
+ffprobe -v error -show_entries stream=codec_type,codec_name,width,height \
+        -of default "<下载目录>/<文件>.mp4"
+
+# 3) 转写（FunASR，自动发现解释器；模型首次运行自动下载，之后离线）
 python3 "$SKILL_DIR/scripts/process/funasr_transcribe.py" "<视频>.mp4" "<转写输出父目录>" --lang zh
 # 产物：<输出父目录>/<视频文件名>/transcript.md + transcript.json
 ```
