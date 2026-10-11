@@ -21,6 +21,7 @@ compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 | 单条视频，要文字/文章 | A. 出文章（默认） | `fetch_for_article.py` |
 | 只要视频/音频文件（收藏/分享） | B. 纯下载原语 | `media_downloader.py` |
 | 多链接同作者/同系列 | C. 批量取稿+体系化编排 | `batch_series_fetch.py` |
+| 微信视频号（单条/账号全量，含解密） | 桥接 content-pipeline 已验证工具 | `fetch_wechat_channels.py`（详见 `references/platforms/wechat-channels.md`） |
 
 ## 脚本（按功能分组）
 
@@ -32,6 +33,7 @@ compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 | `scripts/download/fetch_for_article.py` | **单条出文章默认入口**，自动决策下字幕/音频/视频 |
 | `scripts/download/batch_series_fetch.py` | **多链接/同系列入口**，批量探查+按章节切稿 |
 | `scripts/download/media_downloader.py` | 通用下载原语（列格式/列字幕/手动下载） |
+| `scripts/download/fetch_wechat_channels.py` | 微信视频号桥接入口（自动定位 content-pipeline，调 collect_channels.py；人工开窗一步，下载+Isaac64解密全自动） |
 
 ### 内容处理类（process/）
 | 脚本 | 用途 |
@@ -76,6 +78,7 @@ compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 | 下载某个UP主全部视频，筛选有价值的建知识库 | 作者全量知识库（6步流水线） | 读 `references/pipeline/author-video-knowledge-base.md` |
 | B站UP主全部投稿采集 | B站专用（游客Chrome翻页） | 读 `references/platforms/bilibili-up-listing.md` |
 | 抖音收藏/关注列表采集 | 抖音专用（登录态，低频防风控） | 读 `references/platforms/douyin-favorites-extract.md` |
+| 抖音单条视频**原片下载**（yt-dlp 被拒、要 mp4 原片） | 浏览器抓 douyinvod 合一直链（实测音视频合一） | 读 `references/platforms/douyin-web-video-download.md` |
 
 ---
 
@@ -132,8 +135,10 @@ python3 "$SKILL_DIR/scripts/download/batch_series_fetch.py" "<url1>" "<url2>" -o
 | B站UP主全量采集 | 开游客Chrome驱动前端翻页，不要用yt-dlp | `platforms/bilibili-up-listing.md` |
 | 抖音 | 匿名ttwid→被拒回退Chrome→再被拒走浏览器直读 | `platforms/douyin-browser-extract.md` |
 | 抖音收藏/遍历 | 静默风控，低频（≥30s/条），单会话≤15条 | `platforms/douyin-favorites-extract.md` |
+| 抖音原片下载（yt-dlp 被拒） | `network_requests` 抓 `/video/tos` 合一直链（ffprobe 实测含 aac），导航→播放→取链→下载须同一 cell | `platforms/douyin-web-video-download.md` |
 | 小红书 | yt-dlp内置提取器坏了，用专用脚本，严禁批量遍历 | `platforms/xiaohongshu.md` |
 | 腾讯VOD加密 | 直下不通，走一键脚本+CDP解密 | `platforms/tencent-vod-simpleaes.md` |
+| 微信视频号 | 无免登录网页API；必须电脑微信登录+人工开窗一步（仅macOS，微信GUI禁自动化）；短视频Isaac64解密 | `platforms/wechat-channels.md` |
 | HLS直播录制 | 无加密m3u8直接录，加密走CDP提取 | `platforms/live-stream-record.md` |
 
 ## 行业插件（domain-plugins）
