@@ -91,6 +91,23 @@ print("oid", oid[:20], "同object档数", len(same), "选br", br(url), rec.get("
 
 > bu.js 内嵌 JS 用朴素写法（`function(){}`、`indexOf`、字符串拼接），避免在里面写正则字面量 / `forEach` 复杂链式，实测个别写法会被 JS 评估器判 `Invalid left-hand side`。
 
+## 兜底：bu.download 超时（BU_DOWNLOAD_TIMEOUT）改用 curl
+
+`bu.download()` 内置 **30 秒直下超时**，高码率 / 大文件（如约 6MB 以上、1440×2560 档）可能报 `BU_DOWNLOAD_TIMEOUT: the direct download did not complete within 30.0 seconds`，并在 `~/Downloads` 留下 `未确认 *.crdownload` 分片（不完整、不可用）。处理：
+
+1. 先删残留分片：`rm -f ~/Downloads/未确认*.crdownload`。
+2. **浏览器 cell 只负责取最终直链、不调用 `bu.download`**：上面步骤 1–3（导航 → 轮询 currentSrc 锚定 `__vid` → 同 objectid 取最高 br）完全不变，仅把步骤 4 换成把最终 `url` 写进临时文本——cell 内 `open('/tmp/dy_url.txt','w').write(url)`。
+3. cell 外用 **curl 带 Referer 和浏览器 UA** 直接落盘到视频库。douyinvod 签名 URL 自带签名、服务端校验 Referer，带上即可直下，**无需 cookie**：
+
+```bash
+curl -sL --retry 2 --connect-timeout 15 --max-time 120 \
+  -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36" \
+  -e "https://www.douyin.com/" \
+  -o "<视频库>/<简短中文标题>.mp4" "$(cat /tmp/dy_url.txt)"
+```
+
+> 2026-10-11 实测：一条 br838 / 1440×2560 的翡翠视频，`bu.download` 30s 超时，改 curl 数秒下成，且拿到的清晰度高于 `bu.download` 默认档；同批 6 条中 4 条走 curl 全部成功。**签名 URL 时效极短，取到后立即 curl，不要复用隔了几分钟的 /tmp 文本**（失效就重新导航轮询取新链）。
+
 ## 下载后校验与转写（多条连下必做）
 
 ```bash
