@@ -1,4 +1,5 @@
 ---
+type: workflow
 name: multiplatform-media-fetch
 description: 多平台音视频采集与文字化处理。支持YouTube/B站/抖音/小红书/腾讯VOD加密站，核心能力：单条视频下载与文字提取（字幕/转写/OCR/翻译/成文）、多链接批量取稿与体系化编排、编号课堂等加密站专用下载。
 compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
