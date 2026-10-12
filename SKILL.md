@@ -135,7 +135,8 @@ python3 "$SKILL_DIR/scripts/download/batch_series_fetch.py" "<url1>" "<url2>" -o
 | B站UP主全量采集 | 开游客Chrome驱动前端翻页，不要用yt-dlp | `platforms/bilibili-up-listing.md` |
 | 抖音 | 匿名ttwid→被拒回退Chrome→再被拒走浏览器直读 | `platforms/douyin-browser-extract.md` |
 | 抖音收藏/遍历 | 静默风控，低频（≥30s/条），单会话≤15条 | `platforms/douyin-favorites-extract.md` |
-| 抖音原片下载（yt-dlp 被拒） | `network_requests` 抓 `/video/tos` 合一直链（ffprobe 实测含 aac），导航→播放→取链→下载须同一 cell | `platforms/douyin-web-video-download.md` |
+| 抖音作者作品列表/增量检查 | 容器 `[data-e2e="user-post-list"]` 限定+容器内滚动，全页选择器会混推荐位 | `platforms/douyin-author-posts.md` |
+| 抖音原片下载（yt-dlp 被拒） | `network_requests` 抓 `/video/tos` 直链，导航→播放→取链→下载须同一 cell；多数含 aac，**部分新片音视频分离、后台浏览器仅给静音流(-91dB)→改硬字幕 OCR** | `platforms/douyin-web-video-download.md` |
 | 小红书 | yt-dlp内置提取器坏了，用专用脚本，严禁批量遍历 | `platforms/xiaohongshu.md` |
 | 腾讯VOD加密 | 直下不通，走一键脚本+CDP解密 | `platforms/tencent-vod-simpleaes.md` |
 | 微信视频号 | 无免登录网页API；必须电脑微信登录+人工开窗一步（仅macOS，微信GUI禁自动化）；短视频Isaac64解密 | `platforms/wechat-channels.md` |

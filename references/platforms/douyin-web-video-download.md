@@ -28,6 +28,10 @@
 4. 同一 objectid 可能有多个 `br` 清晰度档；也有部分老视频只有一档（`br` 两三百，属源片清晰度，照下）。
 5. 直链是签名 URL、**时效很短**，取到后**立即下载**。
 6. 编码可能是 **hevc(H.265)**（多见于早期/横屏视频），fmmpeg/ffprobe 一般可直接解；FunASR 只抽音轨不受影响。
+7. **【2026-10-12 新增】部分新片是"音视频分离"且后台浏览器只给静音流**：`/video/tos` 各清晰度档（含高码率）自带的 aac 是**数字静音占位**（`mean/max_volume=-91dB`、码率仅 2–3kbps），独立 `/audio/tos` 轨在 bu 后台实例里**同样静音**。根因是 bu 为无系统音频通道的后台实例、且播放器 `muted` 无法用 JS/坐标点击/M 键解除（抖音对自动化播放不下发声音频）。**判断方法**：下载后 `ffmpeg -i x.mp4 -af volumedetect -f null -` 看 `max_volume`，≈ `-91dB` 即静音；FunASR 会报 `empty speech / 0 段`。
+   - **不要**为此反复尝试解除静音或换 UA/cookie 硬刚（实测点击音量钮、M 键、`muted=false`、CDP 移动模拟、iesdouyin 分享页、curl 手机 UA、yt-dlp 匿名与 `--browser chrome` 均失败：分享页桌面体重定向回 PC、手机 UA 拿到 JS 壳、yt-dlp 报 `Fresh cookies needed` 403）。
+   - **正解（知识提取目的）**：这类口播片通常**全程带逐句硬字幕**，直接走 [`../process/video-screen-ocr.md`](../process/video-screen-ocr.md) 批量抽帧 OCR 还原讲稿（口播片用 `--interval 2 --hash-threshold 4`，阈值调小以保留字幕切换帧）；硬字幕比语音转写更准、无同音字错误。画面档保留最高码率即可（竖屏源片 web 上限常见 576×1024）。
+   - 若确需声音本身（音频效果分析、配乐），OCR 无法替代，需另走有音频通道的真实/有头浏览器或手机端，单独立项。
 
 ## 前置
 
