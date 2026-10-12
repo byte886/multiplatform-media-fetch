@@ -34,6 +34,7 @@ compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 | `scripts/download/batch_series_fetch.py` | **多链接/同系列入口**，批量探查+按章节切稿 |
 | `scripts/download/media_downloader.py` | 通用下载原语（列格式/列字幕/手动下载） |
 | `scripts/download/fetch_wechat_channels.py` | 微信视频号桥接入口（自动定位 content-pipeline，调 collect_channels.py；人工开窗一步，下载+Isaac64解密全自动） |
+| `scripts/download/collect_douyin_comments.py` | 抖音单条视频评论采集（只读，浏览器直读 DOM，匿名档优先；详见 `references/platforms/douyin-comments-extract.md`） |
 
 ### 内容处理类（process/）
 | 脚本 | 用途 |
@@ -135,6 +136,7 @@ python3 "$SKILL_DIR/scripts/download/batch_series_fetch.py" "<url1>" "<url2>" -o
 | B站UP主全量采集 | 开游客Chrome驱动前端翻页，不要用yt-dlp | `platforms/bilibili-up-listing.md` |
 | 抖音 | 匿名ttwid→被拒回退Chrome→再被拒走浏览器直读 | `platforms/douyin-browser-extract.md` |
 | 抖音收藏/遍历 | 静默风控，低频（≥30s/条），单会话≤15条 | `platforms/douyin-favorites-extract.md` |
+| 抖音单条视频评论采集 | 浏览器直读 DOM，匿名档优先、只读低频 | `platforms/douyin-comments-extract.md` |
 | 抖音作者作品列表/增量检查 | 容器 `[data-e2e="user-post-list"]` 限定+容器内滚动，全页选择器会混推荐位 | `platforms/douyin-author-posts.md` |
 | 抖音原片下载（yt-dlp 被拒） | `network_requests` 抓 `/video/tos` 直链，导航→播放→取链→下载须同一 cell；多数含 aac，**部分新片音视频分离、后台浏览器仅给静音流(-91dB)→改硬字幕 OCR** | `platforms/douyin-web-video-download.md` |
 | 小红书 | yt-dlp内置提取器坏了，用专用脚本，严禁批量遍历 | `platforms/xiaohongshu.md` |
