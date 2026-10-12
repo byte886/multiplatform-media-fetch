@@ -95,17 +95,14 @@ library/08_sources/xiaohongshu_comments/
 ## 7. 实采准备（⑩）状态：⚠️ 待用户提供链接
 
 - **只读预检**：登录 profile `~/.cache/multiplatform-media-fetch/xhs_profile/` **存在**（`Default/Cookies` + `Local State`，时间戳 2026-10-05 23:24）。
-- **但本次未实采**，原因：
-  1. cookie 为 7 天前，`web_session` 服务端签发大概率已过期；
-  2. 账号 2026-10-06/07 已收两条官方风控（异常提醒 + 违规预警），按本仓红线冷却期 **7–14 天尚未届满**（今日第 5 天）；
-  3. 用户**未提供**一条带 `xsec_token` 的真实笔记 URL。
-- 按"不硬造 URL / 不强攻登录 / 冷却期内不自动浏览"纪律，**本项不标完成**。
+- **但本次未实采**，原因（用户原则，2026-10-13 澄清）：**只处理已得到的原数据，没得到的暂不采集**——小红书当前没有已得的带 `xsec_token` 真实笔记链接，保持设计就绪、不主动采集。
+- 按"不硬造 URL / 不强攻登录 / 未得数据不主动采集"纪律，**本项不标完成**。
 
 ### 用户提供链接后的实采闭环（人工触发）
 
 ```bash
 PY="装了 playwright 的 python3"
-# 0. 确认冷却期已过、且人工已在手机 App 正常刷过
+# 0. 用户已提供一条带 xsec_token 的完整笔记链接（已得原数据）
 # 1. （如 cookie 过期）人工扫码一次
 $PY scripts/download/xiaohongshu/xiaohongshu_downloader.py login
 # 2. 图文 + 元数据（用户从浏览器点进笔记后复制的完整 URL，必带 xsec_token）
@@ -123,4 +120,4 @@ $PY scripts/download/xiaohongshu/xiaohongshu_downloader.py comments "<完整URL>
 2. **脚本 5 轮滚动 > 3 页红线**：需把 `range(5)` 改为可配、默认 ≤3。
 3. **xsec_token 有时效**：裸 note_id 必被 300031 重定向 404；必须用户从首页/搜索点进后复制完整 URL。
 4. **设备互踢**：bu 浏览器与 playwright 脚本 profile 同登小红书会互踢；调试只用脚本独立 profile。
-5. **冷却期纪律**：账号带预警，7–14 天内不开采集 profile——这是本次不自动实采的根本原因。
+5. **选择性采集原则（2026-10-13 用户澄清）**：只处理已得到的原数据，未得到的暂不采集——小红书无已得 xsec_token 链接时保持设计就绪，不主动采集。
