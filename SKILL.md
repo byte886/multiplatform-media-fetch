@@ -66,6 +66,7 @@ compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 | 已有音频/视频，直接转写成文字 | 语音转写（FunASR） | `funasr_transcribe.py` |
 | 已有视频，要提取画面里的文字（界面/PPT/代码） | 视频画面OCR | `macos_vision_ocr_pipeline.py` |
 | 已有srt/vtt字幕文件，清洗成纯文本 | 字幕清洗 | `clean_subtitle.py` |
+| 单条视频，要**给人阅读的文档/汇报型材料**（知识科普、选购对比） | 视频转阅读文档 SOP（角度决策→结构→美化→归档） | 读 `references/pipeline/video-to-reading-doc-sop.md` |
 
 ### 三、分析类
 | 用户需求 | 对应服务 | 入口 |
