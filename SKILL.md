@@ -1,7 +1,7 @@
 ---
 type: workflow
 name: multiplatform-media-fetch
-description: 多平台音视频采集与文字化处理。支持YouTube/B站/抖音/小红书/腾讯VOD加密站，核心能力：单条视频下载与文字提取（字幕/转写/OCR/翻译/成文）、多链接批量取稿与体系化编排、编号课堂等加密站专用下载。
+description: 多平台音视频采集与文字化处理。支持YouTube/B站/抖音/小红书/腾讯VOD加密站，核心能力：单条视频下载与文字提取（字幕/转写/OCR/翻译/成文）、**单条视频转可阅读文档/汇报型材料（决策型选购指南等，见 video-to-reading-doc SOP）**、多链接批量取稿与体系化编排、编号课堂等加密站专用下载。
 compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 ---
 
@@ -22,6 +22,7 @@ compatibility: 仅 macOS(Darwin) 实测；Windows/Linux 未适配
 | 单条视频，要文字/文章 | A. 出文章（默认） | `fetch_for_article.py` |
 | 只要视频/音频文件（收藏/分享） | B. 纯下载原语 | `media_downloader.py` |
 | 多链接同作者/同系列 | C. 批量取稿+体系化编排 | `batch_series_fetch.py` |
+| **单条视频，要给人阅读的文档/汇报型材料** | **D. 转阅读文档 SOP（决策型选购指南等）** | **读 `references/pipeline/video-to-reading-doc-sop.md`** |
 | 微信视频号（单条/账号全量，含解密） | 桥接 content-pipeline 已验证工具 | `fetch_wechat_channels.py`（详见 `references/platforms/wechat-channels.md`） |
 
 ## 脚本（按功能分组）
